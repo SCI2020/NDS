@@ -1,0 +1,7 @@
+**/.ipynb_checkpoints
+**/__pycache__
+**/logs/*
+**/.vscode
+**/slurm
+**/*encoder/build
+**/*encoder/*egg*

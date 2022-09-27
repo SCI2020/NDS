@@ -1,0 +1,26 @@
+expname = run_netf_origin_S_reso8
+basedir = ./logs/S/
+
+datadir = ./data/S_reso8.mat
+dataset_type = generated
+neglect_zero_bins = True
+neglect_former_nums = 400
+neglect_back_nums = 324
+
+use_encoding = True
+no_rho = False
+encoding_dim = 4
+encoding_dim_view = 4
+skips = [4]
+
+N_iters = 10000
+bin_batch = 1024
+lrate = 5e-4
+lr_decay_rate = 0.1
+sampling_points_nums = 37
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 1000
+i_print = 100
