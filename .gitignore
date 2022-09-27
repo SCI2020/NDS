@@ -1,6 +1,6 @@
 **/.ipynb_checkpoints
 **/__pycache__
-**/logs/*
+**/logs
 **/.vscode
 **/slurm
 **/*encoder/build
