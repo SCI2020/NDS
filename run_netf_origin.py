@@ -234,8 +234,8 @@ def train():
     print(f'All bins < {data_start} and bins > {data_end} are neglected. Ignored data: {nlos_data.shape}')
 
     # Pre-process
-    pmin = torch.Tensor([-wall_size/2 - data_end * deltaT, - data_end * deltaT, -wall_size/2 - data_end * deltaT, 0, -np.pi]).float().to(device)
-    pmax = torch.Tensor([wall_size/2 + data_end * deltaT, - data_start * deltaT, wall_size/2 + data_end * deltaT, np.pi, 0]).float().to(device)
+    pmin = torch.Tensor([-wall_size/2 - data_end * deltaT, data_start * deltaT, -wall_size/2 - data_end * deltaT, 0, -np.pi]).float().to(device)
+    pmax = torch.Tensor([wall_size/2 + data_end * deltaT, data_end * deltaT, wall_size/2 + data_end * deltaT, np.pi, 0]).float().to(device)
     
     camera_grid_positions = torch.from_numpy(camera_grid_positions).float().to(device)
     camera_grid_positions = camera_grid_positions.reshape([3,1,-1]).expand(-1, data_end-data_start, -1)
@@ -264,13 +264,13 @@ def train():
     reso = 64
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-magic_number, magic_number, reso),
-        torch.linspace(data_start * deltaT, data_end * deltaT, reso) * -1,
+        torch.linspace(data_start * deltaT, data_end * deltaT, reso),
         torch.linspace(-magic_number, magic_number, reso)
     )
     input_x = input_x.reshape([-1, 1])
     input_y = input_y.reshape([-1, 1])
     input_z = input_z.reshape([-1, 1])
-    test_input = torch.cat((input_x, input_y, input_z, torch.ones_like(input_x) * np.pi/2, torch.ones_like(input_x) * np.pi/2 * -1), axis = 1)
+    test_input = torch.cat((input_x, input_y, input_z, torch.ones_like(input_x) * np.pi/2, torch.ones_like(input_x) * np.pi/2), axis = 1)
     test_input = (test_input - pmin) / (pmax - pmin)
     test_input_pe = encoding_sph_tensor(test_input.to(device), args.encoding_dim, args.encoding_dim_view,  args.no_rho)
 

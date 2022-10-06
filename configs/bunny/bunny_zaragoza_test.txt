@@ -1,0 +1,30 @@
+expname = run_netf_bunny_zaragoza_test
+basedir = ./logs/bunny/
+
+datadir = ./data/bunny_diffuse_zaragoza_256.mat
+dataset_type = nlos
+neglect_zero_bins = True
+neglect_former_nums = 90
+neglect_back_nums = 112
+
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 3
+hidden_dim = 32
+geo_feat_dim = 15
+num_layers_color = 3
+hidden_dim_color = 16
+bound = 1
+reso = 64
+
+N_iters = 10000
+bin_batch= 1024
+lrate = 1e-3
+lr_decay_rate = 0.1
+sampling_points_nums = 55
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 1000
+i_print = 100

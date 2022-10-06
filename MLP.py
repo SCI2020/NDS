@@ -78,7 +78,7 @@ class NGPNetwork(torch.nn.Module):
         self.num_layers = num_layers
         self.hidden_dim = hidden_dim
         self.geo_feat_dim = geo_feat_dim
-        self.encoder, self.in_dim = get_encoder(encoding, desired_resolution=64 * bound)
+        self.encoder, self.in_dim = get_encoder(encoding, desired_resolution=reso * bound)
         
         self.bound = bound
 
@@ -102,7 +102,7 @@ class NGPNetwork(torch.nn.Module):
         self.num_layers_color = num_layers_color        
         self.hidden_dim_color = hidden_dim_color
         self.encoder_dir, self.in_dim_dir = get_encoder(encoding_dir)
-        
+
         color_net =  []
         for l in range(num_layers_color):
             if l == 0:
@@ -133,6 +133,7 @@ class NGPNetwork(torch.nn.Module):
                 h = F.relu(h, inplace=True)
 
         sigma = F.relu(h[..., 0])
+        # sigma = torch.sigmoid(h[..., 0])
         # sigma = trunc_exp(h[..., 0])
         # sigma = torch.abs(h[..., 0])
         geo_feat = h[..., 1:]
@@ -150,7 +151,8 @@ class NGPNetwork(torch.nn.Module):
         # color = torch.sigmoid(h)
         # color = torch.abs(h)
         color = F.relu(h)
-
+        # import scipy.io as scio
+        # scio.savemat('./test_encoding.mat', {"x":x.detach().cpu().numpy(), "d":d.detach().cpu().numpy()})
         return sigma.reshape([-1,1]), color
 
 

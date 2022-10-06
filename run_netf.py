@@ -123,7 +123,7 @@ def train():
     elif args.dataset_type == 'iqi':
         nlos_data, camera_grid_positions, deltaT = load_iqi_data(args.datadir)
         nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
-        nlos_data = nlos_data / nlos_data.max()
+        nlos_data = nlos_data / nlos_data.max() * 100
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
         wall_size = camera_grid_positions[0,:].max() * 2
@@ -139,7 +139,7 @@ def train():
         nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
         nlos_data = nlos_data / nlos_data.max()
         deltaT = 0.0012
-        wall_size = 0.55
+        wall_size = 1
         magic_number = wall_size / 2
         # wall_resolution = 8
         camera_grid_positions_z = np.linspace(-magic_number, magic_number, wall_resolution)
@@ -158,6 +158,32 @@ def train():
         print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded nlos')
         # return
+    elif args.dataset_type == 'simtof':
+        nlos_data, deltaT = load_simtof_data(args.datadir)
+        # nlos_data = np.transpose(nlos_data, [2, 0, 1])
+        nlos_data = np.transpose(nlos_data, [2, 1, 0])
+        wall_resolution = nlos_data.shape[1]
+        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
+        nlos_data = nlos_data / nlos_data.max() * 100
+        # deltaT = 0.0012
+        wall_size = 1
+        magic_number = wall_size / 2
+        # wall_resolution = 8
+        camera_grid_positions_z = np.linspace(-magic_number, magic_number, wall_resolution)
+        camera_grid_positions_z = np.outer(camera_grid_positions_z, np.ones_like(camera_grid_positions_z))
+        camera_grid_positions_y = np.zeros([wall_resolution*wall_resolution,1])
+        camera_grid_positions_x = np.linspace(-magic_number, magic_number, wall_resolution)
+        camera_grid_positions_x = np.outer(np.ones_like(camera_grid_positions_x), camera_grid_positions_x)
+        camera_grid_positions_z = camera_grid_positions_z.flatten().reshape([-1,1])
+        camera_grid_positions_x = camera_grid_positions_x.flatten().reshape([-1,1])
+        camera_grid_positions = np.concatenate((camera_grid_positions_x, camera_grid_positions_y, camera_grid_positions_z), axis=1)
+        camera_grid_positions = camera_grid_positions.swapaxes(0,1)
+
+        # io.savemat('./test.mat',{'pos':camera_grid_positions})
+        volume_position = [0 , 1.08, 0]
+        volume_size = [0.5]
+        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print('Loaded simtof')
     elif args.dataset_type == 'real':
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
@@ -226,6 +252,7 @@ def train():
     model = model.to(device)
 
     criterion = torch.nn.MSELoss(reduction='mean')
+    criterion_l1 = torch.nn.L1Loss(reduction='mean')
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lrate, betas=(0.9, 0.99), eps=1e-15)
     optimizer.zero_grad()
 
@@ -294,18 +321,23 @@ def train():
         input_coord, input_dir, theta, _, _, _, r_batch = spherical_sample_bin_tensor(camera_grid_positions[:,index_rand], r[index_rand].squeeze(), args.sampling_points_nums)
         sin_theta = torch.sin(theta)
         input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
-
+        # r_batch_coe = r_batch.pow(2) / r_batch.pow(2)
+        # print(r_batch.shape, r_batch.max(), r_batch.min())
+        # return
         # predict transient
         sigma, color = model(input_coord, input_dir)
         network_res = torch.mul(sigma, color)
         network_res = torch.mul(network_res, sin_theta)
         network_res = network_res.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
         network_res = torch.sum(network_res, 1)
-        # network_res = network_res / r_batch ** 2
+        # print(network_res.shape, r_batch.shape, (r_batch ** 2).shape)
+        # return
+        network_res = network_res / (r_batch ** 2)
         
         nlos_histogram = nlos_data[index_rand].squeeze()
 
         # update
+        # loss = criterion(network_res, nlos_histogram) + 20 * criterion_l1(sigma, torch.zeros_like(sigma))
         loss = criterion(network_res, nlos_histogram)
         loss.backward()
         optimizer.step()
@@ -348,8 +380,14 @@ def train():
                 temp_img = temp.max(axis = 1).values
                 plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.axis('off')
-                plt.savefig(img_path + 'result_' + str(i+1))
+                plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
                 plt.close()
+                temp_img = temp.max(axis = 0).values
+                plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.axis('off')
+                plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
+                plt.close()
+
                 io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
         
         # log model

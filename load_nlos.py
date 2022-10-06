@@ -64,6 +64,19 @@ def load_generated_data(basedir):
 
     return data
 
+def load_simtof_data(basedir):
+    # nlos_data = h5py.File(basedir, 'r')
+    nlos_data = scio.loadmat(basedir)
+
+    data = nlos_data['data']
+    data = data[:, :, :]
+    data = (data[:,:,0::2] + data[:,:,1::2]) / 2 
+
+    deltaT = nlos_data['deltaT'][0][0]
+    # data = torch.from_numpy(data)
+
+    return data, deltaT
+
 def load_generated_gt(gtdir):
     volume_gt = scio.loadmat(gtdir)
 

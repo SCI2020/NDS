@@ -1,0 +1,30 @@
+expname = run_netf_bunny_simtof_test
+basedir = ./logs/bunny/
+
+datadir = ./data/bunny_simtof.mat
+dataset_type = simtof
+neglect_zero_bins = True
+neglect_former_nums = 150
+neglect_back_nums = 174
+
+encoding = hashgrid
+encoding_dir = hashgrid
+num_layers = 2
+hidden_dim = 16
+geo_feat_dim = 15
+num_layers_color = 2
+hidden_dim_color = 16
+bound = 1
+reso = 64
+
+N_iters = 1
+bin_batch = 1024
+lrate = 5e-3
+lr_decay_rate = 0.1
+sampling_points_nums = 55
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 1000
+i_print = 100

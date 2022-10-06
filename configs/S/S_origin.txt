@@ -13,9 +13,9 @@ encoding_dim = 4
 encoding_dim_view = 4
 skips = [4]
 
-N_iters = 10000
+N_iters = 1000
 bin_batch = 1024
-lrate = 1e-3
+lrate = 5e-4
 lr_decay_rate = 0.1
 sampling_points_nums = 37
 
