@@ -317,15 +317,25 @@ def train():
     for i in trange(0, N_iters):
         ################################################################################
         # random sampling and normalize
+        # print('------------------------------------------')
+        # time0 = time.time()
         index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
+        # print(f"Index time: {time.time() - time0}")
+        # time0 = time.time()
         input_coord, input_dir, theta, _, _, _, r_batch = spherical_sample_bin_tensor(camera_grid_positions[:,index_rand], r[index_rand].squeeze(), args.sampling_points_nums)
+        # print(f"Sampling time: {time.time() - time0}")
+        # time0 = time.time()
         sin_theta = torch.sin(theta)
         input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
         # r_batch_coe = r_batch.pow(2) / r_batch.pow(2)
         # print(r_batch.shape, r_batch.max(), r_batch.min())
         # return
         # predict transient
+        # print(f"Time: {time.time() - time0}")
+        # time0 = time.time()
         sigma, color = model(input_coord, input_dir)
+        # print(f"Model time: {time.time() - time0}")
+        # time0 = time.time()        
         network_res = torch.mul(sigma, color)
         network_res = torch.mul(network_res, sin_theta)
         network_res = network_res.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
@@ -333,7 +343,8 @@ def train():
         # print(network_res.shape, r_batch.shape, (r_batch ** 2).shape)
         # return
         network_res = network_res / (r_batch ** 2)
-        
+        # print(f"Cal time: {time.time() - time0}")
+        # time0 = time.time() 
         nlos_histogram = nlos_data[index_rand].squeeze()
 
         # update

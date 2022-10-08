@@ -5,3 +5,5 @@
 **/slurm
 **/*encoder/build
 **/*encoder/*egg*
+**/*build
+**/*/*egg*

@@ -17,7 +17,7 @@ hidden_dim_color = 16
 bound = 1
 reso = 64
 
-N_iters = 100
+N_iters = 5
 bin_batch= 1024
 lrate = 5e-3
 lr_decay_rate = 0.9
