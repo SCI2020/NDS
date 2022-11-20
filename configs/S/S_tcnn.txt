@@ -1,4 +1,4 @@
-expname = run_netf_S_test
+expname = run_netf_tcnn_S
 basedir = ./logs/S/
 
 datadir = ./data/S_diffuse_simtof_64.mat
@@ -7,25 +7,25 @@ neglect_zero_bins = True
 neglect_former_nums = 400
 neglect_back_nums = 424
 
-tcnn = False
+tcnn = True
 encoding = hashgrid
 encoding_dir = sphere_harmonics
 num_layers = 2
-hidden_dim = 16
+hidden_dim = 64
 geo_feat_dim = 15
 num_layers_color = 3
-hidden_dim_color = 16
+hidden_dim_color = 64
 bound = 1
 reso = 64
 
 N_iters = 100
-bin_batch= 1024
-lrate = 5e-3
+bin_batch = 512
+lrate = 3e-3
 lr_decay_rate = 0.9
 sampling_points_nums = 33
 
-i_loss = 100
-i_hist = 100
-i_image = 10
+i_loss = 1000
+i_hist = 1000
+i_image = 1000
 i_model = 1000
 i_print = 100

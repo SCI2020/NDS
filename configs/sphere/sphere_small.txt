@@ -1,15 +1,15 @@
-expname = run_netf_S_test
-basedir = ./logs/S/
+expname = run_netf_sphere_small
+basedir = ./logs/sphere/
 
-datadir = ./data/S_diffuse_simtof_64.mat
+datadir = ./data/sphere_small_simtof.mat
 dataset_type = generated
 neglect_zero_bins = True
-neglect_former_nums = 400
+neglect_former_nums = 200
 neglect_back_nums = 424
 
 tcnn = False
 encoding = hashgrid
-encoding_dir = sphere_harmonics
+encoding_dir = hashgrid
 num_layers = 2
 hidden_dim = 16
 geo_feat_dim = 15
@@ -18,14 +18,14 @@ hidden_dim_color = 16
 bound = 1
 reso = 64
 
-N_iters = 100
+N_iters = 1000
 bin_batch= 1024
-lrate = 5e-3
-lr_decay_rate = 0.9
+lrate = 5e-4
+lr_decay_rate = 0.1
 sampling_points_nums = 33
 
 i_loss = 100
 i_hist = 100
-i_image = 10
+i_image = 100
 i_model = 1000
 i_print = 100

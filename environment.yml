@@ -1,4 +1,4 @@
-name: torch-ngp
+name: torch-ngp-test
 channels:
   - pytorch
   - conda-forge
@@ -17,6 +17,7 @@ dependencies:
   - rich
   - packaging
   - scipy
+  - tensorboard
   - pip
   - pip:
     - imageio
@@ -25,4 +26,5 @@ dependencies:
     - PyMCubes
     - pysdf
     - dearpygui
-    - git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+    - configargparse
+

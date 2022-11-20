@@ -1,0 +1,31 @@
+expname = run_netf_sphere
+basedir = ./logs/sphere/
+
+datadir = ./data/sphere_simtof.mat
+dataset_type = generated
+neglect_zero_bins = True
+neglect_former_nums = 100
+neglect_back_nums = 424
+
+tcnn = False
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 3
+hidden_dim = 64
+geo_feat_dim = 15
+num_layers_color = 4
+hidden_dim_color = 64
+bound = 1
+reso = 64
+
+N_iters = 10000
+bin_batch= 2048
+lrate = 1e-4
+lr_decay_rate = 0.1
+sampling_points_nums = 45
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 1000
+i_print = 100

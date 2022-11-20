@@ -1,11 +1,11 @@
-expname = run_netf_x
-basedir = ./logs/
+expname = run_netf_S_highreso
+basedir = ./logs/S/
 
-datadir = ./data/x.mat
-dataset_type = nlos
+datadir = ./data/S_simtof_32_highreso.mat
+dataset_type = simtof
 neglect_zero_bins = True
-neglect_former_nums = xxx
-neglect_back_nums = xxx
+neglect_former_nums = 60
+neglect_back_nums = 100
 
 tcnn = False
 encoding = hashgrid
@@ -19,15 +19,15 @@ bound = 1
 reso = 64
 
 N_iters = 1000
-bin_batch= 1024
-lrate = 2e-3
+bin_batch = 1024
+lrate = 5e-4
 lr_decay_rate = 0.1
-sampling_points_nums = 37
+sampling_points_nums = 64
 
 i_loss = 100
 i_hist = 10000
 i_image = 100
 i_model = 100000
 i_print = 100
-i_obj = 100
-obj_threshold = 0.01
+i_obj = 1000
+obj_threshold = 0.1

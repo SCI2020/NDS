@@ -1,0 +1,31 @@
+expname = run_netf_tcnn_pikachu_decolor
+basedir = ./logs/pikachu/
+
+datadir = ./data/pikachu_09_21_decolor.mat
+dataset_type = iqi
+neglect_zero_bins = True
+neglect_former_nums = 200
+neglect_back_nums = 1268
+
+tcnn = True
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 2
+hidden_dim = 64
+geo_feat_dim = 15
+num_layers_color = 3
+hidden_dim_color = 64
+bound = 1
+reso = 64
+
+N_iters = 10000
+bin_batch = 1024
+lrate = 5e-4
+lr_decay_rate = 0.1
+sampling_points_nums = 37
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 10000
+i_print = 100

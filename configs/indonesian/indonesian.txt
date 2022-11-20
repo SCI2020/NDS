@@ -1,11 +1,11 @@
-expname = run_netf_x
-basedir = ./logs/
+expname = run_netf_indonesian
+basedir = ./logs/indonesian/
 
-datadir = ./data/x.mat
+datadir = ./data/zaragoza_indonesian_256_1m_preprocessed.mat
 dataset_type = nlos
 neglect_zero_bins = True
-neglect_former_nums = xxx
-neglect_back_nums = xxx
+neglect_former_nums = 10
+neglect_back_nums = 12
 
 tcnn = False
 encoding = hashgrid
@@ -18,16 +18,14 @@ hidden_dim_color = 64
 bound = 1
 reso = 64
 
-N_iters = 1000
+N_iters = 10000
 bin_batch= 1024
-lrate = 2e-3
-lr_decay_rate = 0.1
+lrate = 1e-4
+lr_decay_rate = 0.01
 sampling_points_nums = 37
 
 i_loss = 100
-i_hist = 10000
+i_hist = 100
 i_image = 100
-i_model = 100000
+i_model = 1000
 i_print = 100
-i_obj = 100
-obj_threshold = 0.01

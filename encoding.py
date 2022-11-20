@@ -43,7 +43,7 @@ class FreqEncoder(nn.Module):
         return out
 
 def get_encoder(encoding, input_dim=3, 
-                multires=6, 
+                multires=2, 
                 degree=4,
                 num_levels=16, level_dim=2, base_resolution=16, log2_hashmap_size=19, desired_resolution=2048, align_corners=False,
                 **kwargs):

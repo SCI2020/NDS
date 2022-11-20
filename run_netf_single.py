@@ -153,7 +153,7 @@ def train():
     ################################################################################
     # Prepare log points and normalize the coords to [-1, 1]
     # reso = args.reso
-    reso = 256
+    reso = 64
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso),
         torch.linspace(data_start * deltaT, data_end * deltaT, reso),
@@ -185,7 +185,8 @@ def train():
 
         # predict transient
         sigma, color = model(input_coord, input_dir)    
-        network_res = torch.mul(sigma, color)
+        network_res = sigma
+        # network_res = torch.mul(sigma, color)
         network_res = torch.mul(network_res, sin_theta)
         network_res = network_res.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
         network_res = torch.sum(network_res, 1)
@@ -232,7 +233,8 @@ def train():
         if (i+1) % i_image == 0:
             with torch.no_grad():
                 temp_sigma, temp_color = model(test_input_coord, test_input_dir)
-                temp = (temp_sigma * temp_color).reshape([reso, reso, reso])
+                # temp = (temp_sigma * temp_color).reshape([reso, reso, reso])
+                temp = (temp_sigma).reshape([reso, reso, reso])
                 temp_img = temp.max(axis = 1).values
                 plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.axis('off')

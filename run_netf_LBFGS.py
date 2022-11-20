@@ -107,7 +107,9 @@ def train():
 
     criterion = torch.nn.MSELoss(reduction='mean')
     criterion_l1 = torch.nn.L1Loss(reduction='mean')
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lrate, betas=(0.9, 0.99), eps=1e-15)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lrate, betas=(0.9, 0.99), eps=1e-15)
+    optimizer = torch.optim.LBFGS(model.parameters(), lr=args.lrate, tolerance_grad=1e-20, tolerance_change=1e-32, history_size=100) # line_search_fn='strong_wolfe'
+    # optimizer = torch.optim.LBFGS(model.parameters(), lr=args.lrate,history_size=100) # line_search_fn='strong_wolfe'
     optimizer.zero_grad()
 
     ################################################################################
@@ -168,14 +170,7 @@ def train():
     # test_input_coord = (test_input_coord - pmin) / (pmax - pmin)
     # test_input_dir = (test_input_dir - pmin_dir) / (pmax_dir - pmin_dir)
 
-    print('------------------------------------------')
-    print('Training Begin')
-
-    global_step = 0
-    loss_global = []
-    time0 = time.time()
-    for i in trange(0, N_iters):
-        ################################################################################
+    def closure():
         # random sampling and normalize
         index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
         r_ = r + torch.rand(r.shape) * deltaT
@@ -193,20 +188,11 @@ def train():
         nlos_histogram = nlos_data[index_rand].squeeze()
 
         # update
-        loss = criterion(network_res, nlos_histogram)
-        # loss = criterion_l1(network_res, nlos_histogram)
+        # loss = criterion(network_res, nlos_histogram)
+        loss = criterion_l1(network_res, nlos_histogram)
         loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
-
-        # lr schedule
-        decay_rate = lr_decay_rate
-        decay_steps = N_iters
-        global_step += 1
-        if global_step <= decay_steps:
-            new_lrate = args.lrate * (decay_rate ** (global_step / decay_steps))
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = new_lrate
+        # optimizer.step()
+        # optimizer.zero_grad()
 
         ################################################################################
         writer.add_scalar('loss', loss.item(), global_step=(i+1))  
@@ -267,11 +253,120 @@ def train():
             model_name = model_path + 'model_' + str(i+1) + '.pt'
             torch.save(model, model_name)
 
-        # log print
-        if (i+1) % i_print == 0: 
-            dt = time.time()-time0
-            tqdm.write(f"[TRAIN] Iter: {i+1} / {N_iters}, Loss: {loss.item()}, lrate: {new_lrate}, TIME: {dt}")
-            time0 = time.time()
+        # # log print
+        # if (i+1) % i_print == 0: 
+        #     dt = time.time()-time0
+        #     tqdm.write(f"[TRAIN] Iter: {i+1} / {N_iters}, Loss: {loss.item()}, lrate: {new_lrate}, TIME: {dt}")
+        #     time0 = time.time()
+
+        return loss
+
+    print('------------------------------------------')
+    print('Training Begin')
+
+    global_step = 0
+    loss_global = []
+    time0 = time.time()
+    for i in trange(0, N_iters):
+        # ################################################################################
+        # # random sampling and normalize
+        # index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
+        # r_ = r + torch.rand(r.shape) * deltaT
+        # input_coord, input_dir, theta, _, _, _, r_batch = spherical_sample_bin_tensor(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums)
+        # sin_theta = torch.sin(theta)
+        # input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
+
+        # # predict transient
+        # sigma, color = model(input_coord, input_dir)    
+        # network_res = torch.mul(sigma, color)
+        # network_res = torch.mul(network_res, sin_theta)
+        # network_res = network_res.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
+        # network_res = torch.sum(network_res, 1)
+        # network_res = network_res / (r_batch ** 2)
+        # nlos_histogram = nlos_data[index_rand].squeeze()
+
+        # # update
+        # # loss = criterion(network_res, nlos_histogram)
+        # loss = criterion_l1(network_res, nlos_histogram)
+        # loss.backward()
+
+        optimizer.step(closure)
+        # optimizer.step()
+        optimizer.zero_grad()
+
+        # lr schedule
+        decay_rate = lr_decay_rate
+        decay_steps = N_iters
+        global_step += 1
+        if global_step <= decay_steps:
+            new_lrate = args.lrate * (decay_rate ** (global_step / decay_steps))
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = new_lrate
+
+        ################################################################################
+        # writer.add_scalar('loss', loss.item(), global_step=(i+1))  
+        # loss_global.append(loss.item())
+
+        # # log loss
+        # if (i+1) % i_loss == 0:
+        #     plt.plot(loss_global)
+        #     plt.title('Loss')
+        #     plt.savefig(loss_path + 'Loss')
+        #     plt.close()
+
+        # # log histogram
+        # if (i+1) % i_hist == 0:
+        #     plt.plot(nlos_histogram.cpu(), alpha = 0.5, label = 'data')
+        #     plt.plot(network_res.cpu().detach().numpy(), alpha = 0.5, label='predicted')
+        #     plt.title('Histogram_iter' + str(i+1))
+        #     plt.legend(loc='upper right')
+        #     plt.savefig(histogram_path + 'histogram_' + str(i+1))
+        #     plt.close()
+
+        # # log recon result
+        # if (i+1) % i_image == 0:
+        #     with torch.no_grad():
+        #         temp_sigma, temp_color = model(test_input_coord, test_input_dir)
+        #         temp = (temp_sigma * temp_color).reshape([reso, reso, reso])
+        #         temp_img = temp.max(axis = 1).values
+        #         plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+        #         plt.axis('off')
+        #         plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
+        #         plt.close()
+        #         temp_img = temp.max(axis = 0).values
+        #         plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+        #         plt.axis('off')
+        #         plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
+        #         plt.close()
+        #         temp_img = temp.max(axis = 2).values
+        #         plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+        #         plt.axis('off')
+        #         plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
+        #         plt.close()
+        #         # io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
+
+        # # log recon obj
+        # if (i+1) % i_obj == 0:
+        #     with torch.no_grad():
+        #         temp_sigma, temp_color = model(test_input_coord, test_input_dir)
+        #         temp = (temp_sigma * temp_color).reshape([reso, reso, reso]).cpu().data.numpy().squeeze()
+        #         threshold = args.obj_threshold
+        #         vertices, triangles = mcubes.marching_cubes(temp, threshold * temp.max())
+        #         mesh = trimesh.Trimesh(vertices, triangles)
+        #         trimesh.repair.fill_holes(mesh)
+        #         # mesh.show()
+        #         mesh.export(obj_path + 'obj_' + str(i+1) + '.obj')
+    
+        # # log model
+        # if (i+1) % i_model == 0:
+        #     model_name = model_path + 'model_' + str(i+1) + '.pt'
+        #     torch.save(model, model_name)
+
+        # # log print
+        # if (i+1) % i_print == 0: 
+        #     dt = time.time()-time0
+        #     tqdm.write(f"[TRAIN] Iter: {i+1} / {N_iters}, Loss: {loss.item()}, lrate: {new_lrate}, TIME: {dt}")
+        #     time0 = time.time()
 
 if __name__=='__main__':
     # CUDA_VISIBLE_DEVICES=x python run_netf.py --config configs/X/X.txt
