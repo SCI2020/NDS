@@ -55,6 +55,51 @@ def spherical_sample_bin_tensor(camera_grid_positions, r, num_sampling_points):
     # return cartesian, dtheta, dphi, spherical[:,0]
     return cartesian, direction, spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]), dtheta, dphi, r
     
+# Spherical Sampling
+def spherical_sample_bin_tensor_bbox(camera_grid_positions, r, num_sampling_points, volume_position, volume_size):
+    [x0,y0,z0] = [camera_grid_positions[0,:],camera_grid_positions[1,:],camera_grid_positions[2,:]]
+
+    # 直角坐标图像参考 Zaragoza 数据集中的坐标系
+    # 球坐标图像参考 Wikipedia 球坐标系词条 ISO 约定
+    # theta 是 俯仰角，与 Z 轴正向的夹角， 范围从 [0,pi]
+    # phi 是 在 XOY 平面中与 X 轴正向的夹角， 范围从 [-pi,pi],本场景中只用到 [0,pi]
+    theta = torch.linspace(0, np.pi , num_sampling_points).cuda()
+    phi = torch.linspace(0, np.pi, num_sampling_points).cuda()
+    
+    dtheta = (np.pi) / num_sampling_points
+    dphi = (np.pi) / num_sampling_points
+
+    grid = torch.stack(torch.meshgrid(r, theta, phi), dim = -1)
+    grid_x = torch.stack(torch.meshgrid(x0, theta, phi), dim = -1)
+    grid_y = torch.stack(torch.meshgrid(y0, theta, phi), dim = -1)
+    grid_z = torch.stack(torch.meshgrid(z0, theta, phi), dim = -1)
+
+    spherical = grid.reshape([-1,3])
+    grid_x = grid_x.reshape([-1,3])[:,0]
+    grid_y = grid_y.reshape([-1,3])[:,0]
+    grid_z = grid_z.reshape([-1,3])[:,0]
+
+    cartesian = spherical2cartesian(spherical)
+
+    cartesian = cartesian + torch.stack([grid_x,grid_y,grid_z], dim=-1)
+
+    # print(spherical[:,1].reshape([-1,1]).max(), spherical[:,1].reshape([-1,1]).min(), spherical[:,2].reshape([-1,1]).max(), spherical[:,2].reshape([-1,1]).min())
+    direction = Azimuth_to_vector(spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]))
+    # direction = spherical[:,1:]
+    # return cartesian, dtheta, dphi, theta_max, theta_min, phi_max, phi_min  # 注意：如果sampling正确的话，x 和 z 应当关于 x0,z0 对称， y 应当只有负值
+    # return cartesian, dtheta, dphi, spherical[:,0]
+
+    box_point = volume_box_point(volume_position, volume_size) # 返回物体box的八个顶点的直角坐标
+    xmin = box_point[0,0]
+    xmax = box_point[4,0]
+    ymin = box_point[0,1]
+    ymax = box_point[2,1]
+    zmin = box_point[0,2]
+    zmax = box_point[1,2]
+    cut_index = (cartesian[:,0]>xmin) * (cartesian[:,0]<xmax) * (cartesian[:,1]>ymin) * (cartesian[:,1]<ymax) * (cartesian[:,2]>zmin) * (cartesian[:,2]<zmax)
+
+    return cartesian, direction, spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]), dtheta, dphi, r, cut_index
+
 def encoding(pt, L):
     logseq = np.logspace(start=0, stop=L-1, num=L, base=2)
     xsin = np.sin(logseq*math.pi*pt[0])
@@ -194,6 +239,120 @@ def spherical2cartesian(pt):
 
     return cartesian_pt
 
+def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, n_dipoles = 20):
+    xmin = -wall_size / 2
+    xmax = wall_size/ 2
+    ymin = -wall_size / 2
+    ymax = wall_size/ 2
+    zmin = 0
+
+    x = np.linspace(xmin, xmax, Nx)
+    y = np.linspace(ymin, ymax, Ny)
+    z = np.linspace(zmin, zmax, Nz)
+
+    # laser position
+    xl = 0
+    yl = 0
+    zl = 0
+
+    # diffuser positioning
+    xd = np.linspace(xmin*2, xmax*2, 2*Nx-1)[None, :, None]
+    yd = np.linspace(ymin*2, ymax*2, 2*Ny-1)[None, None, :]
+    # xd = np.linspace(xmin*2, xmax*2, 2*Nx)[None, Nx-kernel_size:Nx+kernel_size, None]
+    # yd = np.linspace(ymin*2, ymax*2, 2*Ny)[None, None, Ny-kernel_size:Ny+kernel_size]
+    t = np.linspace(0, 2*zmax, 2*Nz) / c
+    t = t[:, None, None]
+
+    #set cdt kernel
+    t[0, :] = 1
+    d = zd - zl
+    z0 = 1 / mu_s
+    D = 1 / (3 * (mu_a + mu_s))
+    rho = np.sqrt((xd - xl)**2 + (yd - yl)**2)
+
+    n_dipoles = 20
+    ii = np.arange(-n_dipoles, n_dipoles+1)[None, None, :]
+    z1 = d * (1 - 2 * ii) - 4*ii*ze - z0
+    z2 = d * (1 - 2 * ii) - (4*ii - 2)*ze + z0
+
+    dipole_term = z1 * np.exp(-(z1**2) / (4*D*c*t)) - \
+    z2 * np.exp(-(z2**2) / (4*D*c*t))
+    dipole_term = np.sum(dipole_term, axis=-1)[..., None]  # sum over dipoles
+    diff_kernel = (4*np.pi*D*c)**(-3/2) * t**(-5/2) \
+            * np.exp(-mu_a * c * t - rho**2 / (4*D*c*t)) \
+            * dipole_term
+
+    psf = torch.from_numpy(diff_kernel.astype(np.float32)).cuda()
+    diffusion_psf = psf / torch.sum(psf)
+    diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
+    diffusion_psf = torch.fft.fftn(diffusion_psf) * torch.fft.fftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.ifftn(diffusion_psf))
+
+    # convert to pytorch and take fft
+    diffusion_psf = diffusion_psf[None, None, :, :, :]
+    # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
+    diffusion_fpsf = torch.fft.fftn(diffusion_psf, s=(Nz*2,Nx*2-1,Ny*2-1))
+
+    return diffusion_fpsf
+
+def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, n_dipoles = 7):
+    xmin = -wall_size / 2
+    xmax = wall_size/ 2
+    ymin = -wall_size / 2
+    ymax = wall_size/ 2
+    zmin = 0
+
+    x = np.linspace(xmin, xmax, Nx)
+    y = np.linspace(ymin, ymax, Ny)
+    z = np.linspace(zmin, zmax, Nz)
+
+    # laser position
+    xl = 0
+    yl = 0
+    zl = 0
+
+    # diffuser positioning
+    # xd = np.linspace(xmin*2, xmax*2, 2*Nx-1)[None, :, None]
+    # yd = np.linspace(ymin*2, ymax*2, 2*Ny-1)[None, None, :]
+    xd = np.linspace(xmin*2, xmax*2, 2*Nx)[None, :, None]
+    yd = np.linspace(ymin*2, ymax*2, 2*Ny)[None, None, :]
+    # xd = np.linspace(xmin*2, xmax*2, 2*Nx)[None, Nx-kernel_size:Nx+kernel_size, None]
+    # yd = np.linspace(ymin*2, ymax*2, 2*Ny)[None, None, Ny-kernel_size:Ny+kernel_size]
+    t = np.linspace(0, 2*zmax, 2*Nz) / c
+    t = t[:, None, None]
+
+    #set cdt kernel
+    t[0, :] = 1
+    d = zd - zl
+    z0 = 1 / mu_s
+    D = 1 / (3 * (mu_a + mu_s))
+    rho = np.sqrt((xd - xl)**2 + (yd - yl)**2)
+
+    n_dipoles = 7
+    ii = np.arange(-n_dipoles, n_dipoles+1)[None, None, :]
+    z1 = d * (1 - 2 * ii) - 4*ii*ze - z0
+    z2 = d * (1 - 2 * ii) - (4*ii - 2)*ze + z0
+
+    dipole_term = z1 * np.exp(-(z1**2) / (4*D*c*t)) - \
+    z2 * np.exp(-(z2**2) / (4*D*c*t))
+    dipole_term = np.sum(dipole_term, axis=-1)[..., None]  # sum over dipoles
+    diff_kernel = (4*np.pi*D*c)**(-3/2) * t**(-5/2) \
+            * np.exp(-mu_a * c * t - rho**2 / (4*D*c*t)) \
+            * dipole_term
+
+    psf = torch.from_numpy(diff_kernel.astype(np.float32)).cuda()
+    diffusion_psf = psf / torch.sum(psf)
+    diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2,-yd.shape[2]//2), dims=(1,2))
+    # diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
+    diffusion_psf = torch.fft.fftn(diffusion_psf) * torch.fft.fftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.ifftn(diffusion_psf))
+
+    # convert to pytorch and take fft
+    diffusion_psf = diffusion_psf[None, None, :, :, :]
+    # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
+    diffusion_fpsf = torch.fft.fftn(diffusion_psf, s=(Nz*2,Nx*2,Ny*2))
+
+    return diffusion_fpsf
 # if __name__=='__main__': # test for encoding
 #     pt = torch.rand(3)
 #     coded_pt = encoding(pt, 10)

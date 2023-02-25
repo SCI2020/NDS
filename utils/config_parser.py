@@ -23,7 +23,10 @@ def config_parser():
                         help='nums of former values ignored')
     parser.add_argument("--neglect_back_nums", type=int, default=0, 
                         help='nums of back values ignored')
-
+    parser.add_argument("--scale_data", action='store_true', 
+                        help='when True, multiply the normalized data by 100')
+    parser.add_argument("--shift", action='store_true', 
+                        help='when True, the data has been shifted')
     # MLP options
     parser.add_argument("--tcnn", action='store_true',
                         help='use tcnn model or not')    
@@ -56,7 +59,15 @@ def config_parser():
                         help='batch size (number of random bin per gradient step)')
     parser.add_argument("--sampling_points_nums", type=int, default=16, 
                         help='number of sampling points in one direction, so the number of all sampling points is the square of this value')
-
+    parser.add_argument("--bbox", action='store_true', default= False,
+                        help='use bounding box or not')  
+    parser.add_argument("--occlusion", action='store_true', default= False,
+                        help='use occlusion in forward model or not')  
+    parser.add_argument("--loss", type=str, default='mse', 
+                        help='encoding type for position')
+    parser.add_argument("--snr", type=float, default=1e10, 
+                        help='learning rate decay rate')
+    
     # log options 
     parser.add_argument("--i_loss", type=int, default=100, 
                         help='num of iters to log loss') 

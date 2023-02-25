@@ -3,6 +3,7 @@ from tkinter import N
 import numpy as np
 # import json
 # import random
+import pdb
 import time
 import torch
 import torch.nn as nn
@@ -37,10 +38,16 @@ def train():
     args = parser.parse_args()
     writer = SummaryWriter(args.basedir + args.expname)
 
-    print('-------------------' + args.expname + '----------------------')
+    print('-------------------' + args.basedir + args.expname + '----------------------')
     ################################################################################
     # Load data
-    nlos_data, camera_grid_positions, deltaT, wall_size = load_data(args.dataset_type, args.datadir)
+    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny, c, mu_a, mu_s, ze, zd = load_data(args.dataset_type, args.datadir)
+    # if not args.scale_data:
+    #     nlos_data = nlos_data/100
+
+    volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
+    volume_position = [0 , deltaT*Nz/2, 0]
+
     # return
 
     ################################################################################
@@ -106,7 +113,7 @@ def train():
     model = model.to(device)
 
     criterion = torch.nn.MSELoss(reduction='mean')
-    criterion_l1 = torch.nn.L1Loss(reduction='mean')
+    # criterion = torch.nn.L1Loss(reduction='mean')
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lrate, betas=(0.9, 0.99), eps=1e-15)
     optimizer.zero_grad()
 
@@ -115,6 +122,7 @@ def train():
     data_start = args.neglect_former_nums
     # data_end = nlos_data.shape[0] - args.neglect_back_nums
     data_end = args.neglect_back_nums
+    # pdb.set_trace()
     nlos_data = nlos_data[data_start:data_end,:]
     nlos_data = torch.Tensor(nlos_data).to(device)
     print(f'All bins < {data_start} and bins > {data_end} are neglected. Ignored data: {nlos_data.shape}')
@@ -153,10 +161,12 @@ def train():
     ################################################################################
     # Prepare log points and normalize the coords to [-1, 1]
     # reso = args.reso
+    # reso = 
     reso = 256
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso),
-        torch.linspace(data_start * deltaT, data_end * deltaT, reso),
+        torch.linspace(0, Nz * deltaT, reso),
+        # torch.linspace(data_start * deltaT, data_end * deltaT, reso),
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso)
     )
     input_x = input_x.reshape([-1, 1])
@@ -177,9 +187,18 @@ def train():
     for i in trange(0, N_iters):
         ################################################################################
         # random sampling and normalize
-        index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
-        r_ = r + torch.rand(r.shape) * deltaT
-        input_coord, input_dir, theta, _, _, _, r_batch = spherical_sample_bin_tensor(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums)
+        # pdb.set_trace()
+        if args.occlusion: 
+            bin_batch = nlos_data.shape[0]
+            index_rand = torch.arange(0, nlos_data.shape[0])
+        else:
+            index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
+        # index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
+        
+        # r_ = r + torch.rand(r.shape) * deltaT
+        r_ = r
+        input_coord, input_dir, theta, _, _, _, r_batch, cut_index = spherical_sample_bin_tensor_bbox(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums, volume_position, volume_size)
+        # input_coord, input_dir, theta, _, _, _, r_batch = spherical_sample_bin_tensor(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums)
         sin_theta = torch.sin(theta)
         input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
 
@@ -187,13 +206,28 @@ def train():
         sigma, color = model(input_coord, input_dir)    
         network_res = torch.mul(sigma, color)
         network_res = torch.mul(network_res, sin_theta)
+        if args.bbox:
+            network_res = network_res.squeeze() * cut_index
+
         network_res = network_res.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
+        if args.occlusion: 
+            sigma = sigma.reshape(data_end-data_start, Nx, Ny, args.sampling_points_nums*args.sampling_points_nums)
+            occlusion = torch.cumsum(sigma, axis = 0)
+            occlusion = torch.exp(- occlusion)
+            occlusion = occlusion.reshape(bin_batch, args.sampling_points_nums*args.sampling_points_nums)
+            network_res = torch.mul(network_res, occlusion)
+    
         network_res = torch.sum(network_res, 1)
         network_res = network_res / (r_batch ** 2)
         nlos_histogram = nlos_data[index_rand].squeeze()
+        # pre_histogram = network_res
+        # pdb.set_trace()
+        pre_histogram = network_res[nlos_histogram>=0]
+        nlos_histogram = nlos_histogram[nlos_histogram>=0]
 
         # update
-        loss = criterion(network_res, nlos_histogram)
+        # pdb.set_trace()
+        loss = criterion(pre_histogram, nlos_histogram)
         # loss = criterion_l1(network_res, nlos_histogram)
         loss.backward()
         optimizer.step()
@@ -222,7 +256,7 @@ def train():
         # log histogram
         if (i+1) % i_hist == 0:
             plt.plot(nlos_histogram.cpu(), alpha = 0.5, label = 'data')
-            plt.plot(network_res.cpu().detach().numpy(), alpha = 0.5, label='predicted')
+            plt.plot(pre_histogram.cpu().detach().numpy(), alpha = 0.5, label='predicted')
             plt.title('Histogram_iter' + str(i+1))
             plt.legend(loc='upper right')
             plt.savefig(histogram_path + 'histogram_' + str(i+1))
@@ -233,20 +267,31 @@ def train():
             with torch.no_grad():
                 temp_sigma, temp_color = model(test_input_coord, test_input_dir)
                 temp = (temp_sigma * temp_color).reshape([reso, reso, reso])
+
+                # pdb.set_trace()
+                temp[:,-10:,:] = 0
+                temp[:,:data_start*reso//Nz,:] = 0
+                temp[:,data_end*reso//Nz:,:] = 0
+
                 temp_img = temp.max(axis = 1).values
-                plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                plt.axis('off')
-                plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
+
                 temp_img = temp.max(axis = 0).values
-                plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                plt.axis('off')
-                plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
+
                 temp_img = temp.max(axis = 2).values
-                plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                plt.axis('off')
-                plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
                 # io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
 

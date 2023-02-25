@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-import tinycudann as tcnn
+# import tinycudann as tcnn
 
 from encoding import get_encoder
 
