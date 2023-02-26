@@ -55,8 +55,8 @@ def config_parser():
                         help='learning rate')
     parser.add_argument("--lr_decay_rate", type=float, default=0.1, 
                         help='learning rate decay rate')
-    parser.add_argument("--bin_batch", type=int, default=2048, 
-                        help='batch size (number of random bin per gradient step)')
+    # parser.add_argument("--bin_batch", type=int, default=2048, 
+    #                     help='batch size (number of random bin per gradient step)')
     parser.add_argument("--sampling_points_nums", type=int, default=16, 
                         help='number of sampling points in one direction, so the number of all sampling points is the square of this value')
     parser.add_argument("--bbox", action='store_true', default= False,
@@ -65,8 +65,8 @@ def config_parser():
                         help='use occlusion in forward model or not')  
     parser.add_argument("--loss", type=str, default='mse', 
                         help='encoding type for position')
-    parser.add_argument("--snr", type=float, default=1e10, 
-                        help='learning rate decay rate')
+    # parser.add_argument("--snr", type=float, default=1e10, 
+    #                     help='learning rate decay rate')
     
     # log options 
     parser.add_argument("--i_loss", type=int, default=100, 
@@ -83,4 +83,20 @@ def config_parser():
                         help='num of iters to log obj') 
     parser.add_argument("--obj_threshold", type=float, default=0.01, 
                         help='threshold for obj extraction')    
+    
+    # cdt options 
+    parser.add_argument("--cdt_loss", type=str, default='cdt', 
+                        help='when True, the data has been shifted')
+    parser.add_argument("--snr", type=float, default=1e10, 
+                        help='learning rate decay rate')
+    parser.add_argument("--trim", type=int, default=5000, 
+                        help='num of iters to log print') 
+    parser.add_argument("--nlos_neglect_former_bins", action='store_true', default = False, 
+                        help='when True, those former histogram bins will be neglected and not used in optimization. The threshold is computed automatically to ensure that neglected bins are zero')
+    parser.add_argument("--noise", action='store_true', default = False , 
+                        help='add noise to data or not')
+    parser.add_argument("--nlos_forward_model", type=str, default='lct', 
+                        help='input data directory')
+    parser.add_argument("--scale", action='store_true', default=True,
+                        help='when True, the data has been shifted')
     return parser

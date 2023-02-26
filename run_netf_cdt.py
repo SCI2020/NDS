@@ -149,7 +149,7 @@ def train():
     print(f'Pre-precoess done. nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, r: {r.shape}')
 
     N_iters = args.N_iters
-    bin_batch = args.bin_batch
+    # bin_batch = args.bin_batch
     lr_decay_rate = args.lr_decay_rate
     i_loss = args.i_loss
     i_hist = args.i_hist
@@ -178,9 +178,9 @@ def train():
     # test_input_dir = (test_input_dir - pmin_dir) / (pmax_dir - pmin_dir)
     
     if args.shift:
-        psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, n_dipoles = 20)
+        psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles = 20)
     else:
-        psf = set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, n_dipoles = 7)
+        psf = set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles = 7)
     # pdb.set_trace()
 
     print('------------------------------------------')
@@ -205,6 +205,7 @@ def train():
         input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
 
         # predict transient
+        # pdb.set_trace()
         sigma, color = model(input_coord, input_dir)    
         # print(f"Barrrrrrrrrr: {sigma.dtype}")
         network_res = torch.mul(sigma, color)

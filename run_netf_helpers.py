@@ -82,7 +82,7 @@ def spherical_sample_bin_tensor_bbox(camera_grid_positions, r, num_sampling_poin
     cartesian = spherical2cartesian(spherical)
 
     cartesian = cartesian + torch.stack([grid_x,grid_y,grid_z], dim=-1)
-
+    
     # print(spherical[:,1].reshape([-1,1]).max(), spherical[:,1].reshape([-1,1]).min(), spherical[:,2].reshape([-1,1]).max(), spherical[:,2].reshape([-1,1]).min())
     direction = Azimuth_to_vector(spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]))
     # direction = spherical[:,1:]
@@ -239,7 +239,7 @@ def spherical2cartesian(pt):
 
     return cartesian_pt
 
-def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, n_dipoles = 20):
+def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, device, n_dipoles = 20):
     xmin = -wall_size / 2
     xmax = wall_size/ 2
     ymin = -wall_size / 2
@@ -282,20 +282,20 @@ def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax,
             * np.exp(-mu_a * c * t - rho**2 / (4*D*c*t)) \
             * dipole_term
 
-    psf = torch.from_numpy(diff_kernel.astype(np.float32)).cuda()
+    psf = torch.from_numpy(diff_kernel.astype(np.float32)).to(device)
     diffusion_psf = psf / torch.sum(psf)
     diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
-    diffusion_psf = torch.fft.fftn(diffusion_psf) * torch.fft.fftn(diffusion_psf)
-    diffusion_psf = abs(torch.fft.ifftn(diffusion_psf))
+    diffusion_psf = torch.fft.rfftn(diffusion_psf) * torch.fft.rfftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.irfftn(diffusion_psf))
 
     # convert to pytorch and take fft
     diffusion_psf = diffusion_psf[None, None, :, :, :]
     # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
-    diffusion_fpsf = torch.fft.fftn(diffusion_psf, s=(Nz*2,Nx*2-1,Ny*2-1))
+    diffusion_fpsf = torch.fft.rfftn(diffusion_psf, s=(Nz*2,Nx*2-1,Ny*2-1))
 
     return diffusion_fpsf
 
-def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, n_dipoles = 7):
+def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax, zd, device, n_dipoles = 7):
     xmin = -wall_size / 2
     xmax = wall_size/ 2
     ymin = -wall_size / 2
@@ -328,7 +328,7 @@ def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zma
     D = 1 / (3 * (mu_a + mu_s))
     rho = np.sqrt((xd - xl)**2 + (yd - yl)**2)
 
-    n_dipoles = 7
+    # n_dipoles = 7
     ii = np.arange(-n_dipoles, n_dipoles+1)[None, None, :]
     z1 = d * (1 - 2 * ii) - 4*ii*ze - z0
     z2 = d * (1 - 2 * ii) - (4*ii - 2)*ze + z0
@@ -340,18 +340,17 @@ def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zma
             * np.exp(-mu_a * c * t - rho**2 / (4*D*c*t)) \
             * dipole_term
 
-    psf = torch.from_numpy(diff_kernel.astype(np.float32)).cuda()
+    psf = torch.from_numpy(diff_kernel.astype(np.float32)).to(device)
     diffusion_psf = psf / torch.sum(psf)
     diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2,-yd.shape[2]//2), dims=(1,2))
     # diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
-    diffusion_psf = torch.fft.fftn(diffusion_psf) * torch.fft.fftn(diffusion_psf)
-    diffusion_psf = abs(torch.fft.ifftn(diffusion_psf))
+    diffusion_psf = torch.fft.rfftn(diffusion_psf) * torch.fft.rfftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.irfftn(diffusion_psf))
 
     # convert to pytorch and take fft
     diffusion_psf = diffusion_psf[None, None, :, :, :]
     # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
-    diffusion_fpsf = torch.fft.fftn(diffusion_psf, s=(Nz*2,Nx*2,Ny*2))
-
+    diffusion_fpsf = torch.fft.rfftn(diffusion_psf, s=(Nz*2,Nx*2,Ny*2))
     return diffusion_fpsf
 # if __name__=='__main__': # test for encoding
 #     pt = torch.rand(3)
@@ -366,3 +365,116 @@ def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zma
 #     spherical_pt = cartesian2spherical(pt)
 #     print(spherical_pt)
 #     pass
+
+def addnoise(data):
+    h,w,t = data.shape
+    gau = 0.025 + 0.015 * np.random.randn(h,w,t) + data
+    poi = 0.025 * np.random.randn(h,w,t) * gau + gau
+    # gau = 0.02 + 0.01 * np.random.randn(h,w,t) + data
+    # poi = 0.02 * np.random.randn(h,w,t) * gau + gau
+    return poi
+
+def psf_for_nlos(wall_size, deltaT, Nx, Ny, Nz, device):
+
+    width = wall_size / 2
+    zmax = Nz*deltaT*2
+    slope = width/zmax
+
+    x = np.linspace(-1,1,2*Nx)
+    y = np.linspace(-1,1,2*Ny)
+    z = np.linspace(0,2,2*Nz)
+    grid_z,grid_x,grid_y, = np.meshgrid(z,x,y, indexing='ij')
+
+    psf = abs(((4.*slope)**2)*(grid_x**2 + grid_y**2) - grid_z)
+    psf = np.double(psf==np.repeat(np.expand_dims(psf.min(axis=0),axis=0),2*Nz,axis=0))
+    psf = psf/np.sum(psf[:,Nx,Ny])
+    psf = psf/np.linalg.norm(psf.flatten())
+    psf = np.roll(psf, (Nx, Ny), axis = (1,2))
+    # psf = torch.from_numpy(psf.astype(float)).cuda()[None, None, :, :, :]
+    psf = torch.from_numpy(psf.astype(np.float32)).to(device)
+    # psf_t = torch.load('./psf.npy')
+    # print(torch.sum((psf-psf_t)**2))
+    fpsf = torch.fft.rfftn(psf)
+    # fpsf = torch.fft.fftn(psf)
+
+    return fpsf
+
+def resamplingOperator(Nz, device):
+    # resample matrix
+    # mtx = np.zeros([Nz**2,Nz])
+    # x = np.linspace(0,Nz**2-1,Nz**2).astype(int)
+
+    # mtx[x,(np.ceil(np.sqrt(x+1))-1).astype(int)] = 1
+    # mtx = np.dot(np.diag(1/(np.sqrt(x+1)),k=0),mtx)
+    # mtxi = mtx.T
+
+    # K = math.floor(math.log(Nz)/math.log(2))
+    # for k in range(K):
+    #     mtx  = 0.5*(mtx[::2,:]  + mtx[1:,:][::2,:])
+    #     mtxi = 0.5*(mtxi[:,::2] + mtxi[:,1:][:,::2])
+
+    # mtx = torch.from_numpy(mtx.astype(np.float32)).cuda()
+    # mtxi = torch.from_numpy(mtxi.astype(np.float32)).cuda()
+
+    # # grid_t = torch.load('./mtx.npy')
+    # # print(torch.sum((mtx-grid_t)**2))
+
+    # invmtxi = torch.pinverse(mtxi,1e-1)
+    # invmtx = torch.pinverse(mtx,1e-1)
+
+    # return invmtx, invmtxi, mtx, mtxi
+
+    # cuda
+    # mtx = torch.zeros([Nz**2,Nz]).cuda()
+    # x = torch.linspace(0,Nz**2-1,Nz**2).long().cuda()
+
+    # mtx[x,(torch.ceil(torch.sqrt(x+1))-1).long()] = 1
+
+    # mtx = torch.mm(torch.diag(1/(torch.sqrt(x+1)),diagonal=0),mtx)
+    # mtxi = mtx.T
+
+    # K = math.floor(math.log(Nz)/math.log(2))
+    # for k in range(K):
+    #     mtx  = 0.5*(mtx[::2,:]  + mtx[1:,:][::2,:])
+    #     mtxi = 0.5*(mtxi[:,::2] + mtxi[:,1:][:,::2])
+
+    # # mtx = torch.from_numpy(mtx.astype(np.float32)).cuda()
+    # # mtxi = torch.from_numpy(mtxi.astype(np.float32)).cuda()
+
+    # # grid_t = torch.load('./mtx.npy')
+    # # print(torch.sum((mtx-grid_t)**2))
+
+    # invmtxi = torch.pinverse(mtxi.float(),1e-1)
+    # invmtx = torch.pinverse(mtx.float(),1e-1)
+
+    # return invmtx, invmtxi, mtx, mtxi
+
+    # sparse
+    # mtx = torch.zeros([Nz**2,Nz], device=device1)
+    # x = torch.linspace(0,Nz**2-1,Nz**2).long().to(device1)
+    mtx = torch.zeros([Nz**2,Nz], device='cpu')
+    x = torch.linspace(0,Nz**2-1,Nz**2).long().cpu()
+    mtx[x,(torch.ceil(torch.sqrt(x+1))-1).long()] = 1
+
+    # mtx = mtx.to_sparse()
+    # x = torch.diag(1/(torch.sqrt(x+1)),0).to_sparse().to(device1)
+    # x = torch.sparse.spdiags(1/(torch.sqrt(x+1)), torch.tensor([0]).to(device1), (Nz**2,Nz**2))
+    x = torch.sparse.spdiags(1/(torch.sqrt(x+1)), torch.tensor([0]).cpu(), (Nz**2,Nz**2))
+
+    # x = x.to(device)
+    mtx = mtx
+
+    mtx = torch.sparse.mm(x,mtx).to_dense()
+    mtxi = mtx.T
+    # mtx = mtx
+    # mtxi = mtx.to_dense()
+
+    K = math.floor(math.log(Nz)/math.log(2))
+    for k in range(K):
+        mtx  = 0.5*(mtx[::2,:]  + mtx[1:,:][::2,:])
+        mtxi = 0.5*(mtxi[:,::2] + mtxi[:,1:][:,::2])
+
+    invmtxi = torch.pinverse(mtxi.float(),1e-1).to(device)
+    invmtx = torch.pinverse(mtx.float(),1e-1).to(device)
+
+    return invmtx, invmtxi, mtx, mtxi

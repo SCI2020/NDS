@@ -3,6 +3,7 @@ from rich import print
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pdb
 
 import numpy as np
 # import tinycudann as tcnn
@@ -126,7 +127,8 @@ class NGPNetwork(torch.nn.Module):
     def forward(self, x, d):
         # x: [N, 3], in [-bound, bound]
         # d: [N, 3], nomalized in [-1, 1]
-
+        
+        # pdb.set_trace()
         # sigma
         x = self.encoder(x, bound=self.bound)
 
@@ -135,6 +137,7 @@ class NGPNetwork(torch.nn.Module):
             h = self.sigma_net[l](h)
             if l != self.num_layers - 1:
                 h = F.relu(h, inplace=True)
+        # pdb.set_trace()
 
         # sigma = F.relu(h[..., 0])
         # sigma = torch.sigmoid(h[..., 0])
@@ -143,6 +146,7 @@ class NGPNetwork(torch.nn.Module):
         geo_feat = h[..., 1:]
 
         # color
+        # pdb.set_trace()
         
         d = self.encoder_dir(d)
         h = torch.cat([d, geo_feat], dim=-1)
@@ -150,6 +154,7 @@ class NGPNetwork(torch.nn.Module):
             h = self.color_net[l](h)
             if l != self.num_layers_color - 1:
                 h = F.relu(h, inplace=True)
+        # pdb.set_trace()
         
         # sigmoid activation for rgb
         # color = torch.sigmoid(h)
