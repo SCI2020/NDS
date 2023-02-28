@@ -274,24 +274,24 @@ def train():
                 temp[:,data_end*reso//Nz:,:] = 0
 
                 temp_img = temp.max(axis = 1).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
 
                 temp_img = temp.max(axis = 0).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
 
                 temp_img = temp.max(axis = 2).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
                 # io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
 

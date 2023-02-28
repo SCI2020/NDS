@@ -55,8 +55,8 @@ def config_parser():
                         help='learning rate')
     parser.add_argument("--lr_decay_rate", type=float, default=0.1, 
                         help='learning rate decay rate')
-    # parser.add_argument("--bin_batch", type=int, default=2048, 
-    #                     help='batch size (number of random bin per gradient step)')
+    parser.add_argument("--bin_batch", type=int, default=2048, 
+                        help='batch size (number of random bin per gradient step)')
     parser.add_argument("--sampling_points_nums", type=int, default=16, 
                         help='number of sampling points in one direction, so the number of all sampling points is the square of this value')
     parser.add_argument("--bbox", action='store_true', default= False,

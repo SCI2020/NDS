@@ -223,7 +223,7 @@ def load_data(dataset_type, datadir):
         volume_size = [0.5]
         print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded simtof.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny
+        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny, 0, 0, 0, 0, 0
     
     elif dataset_type == 'cdt':
         nlos_data, deltaT, wall_size = load_simtof_data(datadir)
