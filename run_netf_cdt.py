@@ -227,10 +227,11 @@ def train():
         nlos_pad = torch.zeros([Nz,Nx,Ny])
         nlos_pad[data_start:data_end,:,:] = network_res.reshape([data_end-data_start, Nx, Ny])
 
+        # pdb.set_trace()
         if args.shift:
-            cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real
+            cdt_conv = torch.fft.irfftn(torch.mul(torch.fft.rfftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real
         else:
-            cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real
+            cdt_conv = torch.fft.irfftn(torch.mul(torch.fft.rfftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real
         predict_cdt = cdt_conv.squeeze()[:Nz,:Nx,:Ny]
         predict_cdt = predict_cdt[data_start:data_end,:Nx,:Ny].reshape([-1,1])[index_rand].squeeze()
 
