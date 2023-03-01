@@ -285,13 +285,13 @@ def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax,
     psf = torch.from_numpy(diff_kernel.astype(np.float32)).to(device)
     diffusion_psf = psf / torch.sum(psf)
     diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
-    diffusion_psf = torch.fft.rfftn(diffusion_psf) * torch.fft.rfftn(diffusion_psf)
-    diffusion_psf = abs(torch.fft.irfftn(diffusion_psf))
+    diffusion_psf = torch.fft.iirfftn(diffusion_psf) * torch.fft.iirfftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.iiirfftn(diffusion_psf))
 
     # convert to pytorch and take fft
     diffusion_psf = diffusion_psf[None, None, :, :, :]
     # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
-    diffusion_fpsf = torch.fft.rfftn(diffusion_psf, s=(Nz*2,Nx*2-1,Ny*2-1))
+    diffusion_fpsf = torch.fft.iirfftn(diffusion_psf, s=(Nz*2,Nx*2-1,Ny*2-1))
 
     return diffusion_fpsf
 
@@ -344,13 +344,13 @@ def set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zma
     diffusion_psf = psf / torch.sum(psf)
     diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2,-yd.shape[2]//2), dims=(1,2))
     # diffusion_psf = torch.roll(diffusion_psf, (-xd.shape[1]//2+1,-yd.shape[2]//2+1), dims=(1,2))
-    diffusion_psf = torch.fft.rfftn(diffusion_psf) * torch.fft.rfftn(diffusion_psf)
-    diffusion_psf = abs(torch.fft.irfftn(diffusion_psf))
+    diffusion_psf = torch.fft.iirfftn(diffusion_psf) * torch.fft.iirfftn(diffusion_psf)
+    diffusion_psf = abs(torch.fft.iiirfftn(diffusion_psf))
 
     # convert to pytorch and take fft
     diffusion_psf = diffusion_psf[None, None, :, :, :]
     # diffusion_fpsf = diffusion_fpsf.rfft(3, onesided=False)
-    diffusion_fpsf = torch.fft.rfftn(diffusion_psf, s=(Nz*2,Nx*2,Ny*2))
+    diffusion_fpsf = torch.fft.iirfftn(diffusion_psf, s=(Nz*2,Nx*2,Ny*2))
     return diffusion_fpsf
 # if __name__=='__main__': # test for encoding
 #     pt = torch.rand(3)
@@ -394,7 +394,7 @@ def psf_for_nlos(wall_size, deltaT, Nx, Ny, Nz, device):
     psf = torch.from_numpy(psf.astype(np.float32)).to(device)
     # psf_t = torch.load('./psf.npy')
     # print(torch.sum((psf-psf_t)**2))
-    fpsf = torch.fft.rfftn(psf)
+    fpsf = torch.fft.iirfftn(psf)
     # fpsf = torch.fft.fftn(psf)
 
     return fpsf

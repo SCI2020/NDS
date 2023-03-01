@@ -201,7 +201,7 @@ def train():
             kernel[j,:,:,:] = kernel_tmp/(r**4)
 
         kernel_pad = torch.nn.functional.pad(kernel, [Ny//2-1, Ny//2, Nx//2-1, Nx//2, Nz//2, Nz//2], value=0)
-        kernel_rfft = torch.fft.rfftn(kernel_pad.reshape(Nz,-1).flip(-1).reshape(Nz, Nz*2, Nx*3-2, Ny*3-2), dim=(1,2,3))
+        kernel_rfft = torch.fft.iirfftn(kernel_pad.reshape(Nz,-1).flip(-1).reshape(Nz, Nz*2, Nx*3-2, Ny*3-2), dim=(1,2,3))
 
     print(f'nlos kernel done')
 
@@ -279,8 +279,8 @@ def train():
             # vol_resample = network_res.permute([1, 0, 2])
 
             # convolution
-            vol_fft = torch.fft.rfftn(vol_resample.to(device1),s=(Nz*2, Nx*2, Ny*2))
-            pre_trans = torch.fft.irfftn(torch.mul(vol_fft.to(device1), fpsf.to(device1))).real
+            vol_fft = torch.fft.iirfftn(vol_resample.to(device1),s=(Nz*2, Nx*2, Ny*2))
+            pre_trans = torch.fft.iiirfftn(torch.mul(vol_fft.to(device1), fpsf.to(device1))).real
 
             # unpad and resample transient
             pre_trans = pre_trans[:Nz,:Nx,:Ny].to(device)
@@ -292,8 +292,8 @@ def train():
         elif args.nlos_forward_model=="netf":
             vol_pad = F.pad(network_res, [0, 0, data_start, Nz-data_end, 0, 0]).permute([1, 0, 2])
             vol_pad = torch.nn.functional.pad(vol_pad, [Nx-1, Nx-1, Nx-1, Nx-1, Nz//2, Nz//2], value=0)
-            vol_rfft = torch.fft.rfftn(vol_pad).cuda()
-            pre_trans = torch.fft.ifftshift(torch.fft.irfftn(torch.mul(vol_rfft, kernel_rfft), dim=(1,2,3)), dim=(1,2,3)).real[:,Nz,Nx-1:Nx*2-1,Nx-1:Nx*2-1]
+            vol_rfft = torch.fft.iirfftn(vol_pad).cuda()
+            pre_trans = torch.fft.ifftshift(torch.fft.iiirfftn(torch.mul(vol_rfft, kernel_rfft), dim=(1,2,3)), dim=(1,2,3)).real[:,Nz,Nx-1:Nx*2-1,Nx-1:Nx*2-1]
             pre_trans = pre_trans[data_start:data_end,...]
 
         nlos_pad = F.pad(pre_trans, [0, 0, 0, 0, data_start, Nz-data_end] )
@@ -303,11 +303,11 @@ def train():
         #     nlos_pad = torch.Tensor(tmp_data)[None, None, :, :, :]
         if args.shift:
             # nlos_pad = F.pad(nlos_pad, [0, Ny-1, 0, Nx-1, 0, Nz] )[None, None, :, :, :]
-            cdt_conv = torch.mul(torch.fft.rfftn(nlos_pad.to(device1),s=(Nz*2, Nx*2-1, Ny*2-1)), diffuse_psf.to(device1))
+            cdt_conv = torch.mul(torch.fft.iirfftn(nlos_pad.to(device1),s=(Nz*2, Nx*2-1, Ny*2-1)), diffuse_psf.to(device1))
         else:
             # nlos_pad = F.pad(nlos_pad, [0, Ny, 0, Nx, 0, Nz] )[None, None, :, :, :]
-            cdt_conv = torch.mul(torch.fft.rfftn(nlos_pad,s=(Nz*2, Nx*2, Ny*2)), diffuse_psf.to(device1))
-        predict_cdt = torch.fft.irfftn(cdt_conv.to(device),s=(Nz*2, Nx*2-1, Ny*2-1)).real.squeeze()
+            cdt_conv = torch.mul(torch.fft.iirfftn(nlos_pad,s=(Nz*2, Nx*2, Ny*2)), diffuse_psf.to(device1))
+        predict_cdt = torch.fft.iiirfftn(cdt_conv.to(device),s=(Nz*2, Nx*2-1, Ny*2-1)).real.squeeze()
         # print('predict_cdt:',predict_cdt.min(),predict_cdt.max())
 
 
@@ -325,10 +325,10 @@ def train():
         
 
         if args.shift:
-            cdt_pad_fft = torch.fft.rfftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
+            cdt_pad_fft = torch.fft.iirfftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
         else:
             # print("Magic here.")
-            cdt_pad_fft = torch.fft.rfftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
+            cdt_pad_fft = torch.fft.iirfftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
             
             # cdt_pad_fft = torch.fft.fftn(cdt_pad, s=(Nz*2, Nx*2, Ny*2))
             # temp = torch.load('./x_rfft.pt').cuda()
@@ -339,7 +339,7 @@ def train():
 
         # target_nlos = torch.fft.ifftn(torch.mul(cdt_pad_fft, invpsf)).real
         target_fft = torch.mul(cdt_pad_fft.to(device), invpsf.to(device))
-        target_nlos = torch.fft.irfftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
+        target_nlos = torch.fft.iiirfftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
         # temp = torch.load('x_deconv.pt').cuda()
         # print(torch.sum((temp-target_nlos)**2))
         # temp = torch.load('./psf.pt').cuda()

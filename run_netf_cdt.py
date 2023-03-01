@@ -229,9 +229,9 @@ def train():
 
         # pdb.set_trace()
         if args.shift:
-            cdt_conv = torch.fft.irfftn(torch.mul(torch.fft.rfftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real
+            cdt_conv = torch.fft.iirfftn(torch.mul(torch.fft.irfftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real
         else:
-            cdt_conv = torch.fft.irfftn(torch.mul(torch.fft.rfftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real
+            cdt_conv = torch.fft.iirfftn(torch.mul(torch.fft.irfftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real
         predict_cdt = cdt_conv.squeeze()[:Nz,:Nx,:Ny]
         predict_cdt = predict_cdt[data_start:data_end,:Nx,:Ny].reshape([-1,1])[index_rand].squeeze()
 
