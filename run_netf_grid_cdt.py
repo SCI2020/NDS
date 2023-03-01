@@ -230,8 +230,8 @@ def train():
     reso = 64
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-wall_size, wall_size, reso),
-        # torch.linspace(0, Nz*deltaT*2, reso),
-        torch.linspace(data_start * deltaT, data_end * deltaT, reso),
+        torch.linspace(0, Nz*deltaT, reso),
+        # torch.linspace(data_start * deltaT, data_end * deltaT, reso),
         torch.linspace(-wall_size, wall_size, reso)
     )
 
@@ -457,7 +457,11 @@ def train():
                 # temp = (output[:,0] * output[:,1]).reshape([Nx, Nz, Ny])
                 # temp = output.reshape([Nx, data_end-data_start, Ny])
                 temp = output.reshape([reso, reso, reso])
-                temp = F.pad(temp,[0, 0, data_start*reso//(data_end-data_start), reso*(Nz-data_end)//(data_end-data_start),0, 0])
+                # temp[:,-10:,:] = 0
+                temp[:,-10:,:] = 0
+                temp[:,:data_start*reso//Nz,:] = 0
+                temp[:,data_end*reso//Nz:,:] = 0
+                # temp = F.pad(temp,[0, 0, data_start*reso//(data_end-data_start), reso*(Nz-data_end)//(data_end-data_start),0, 0])
                 # temp = (output[:,0] * output[:,1]).reshape([Nx, data_end-data_start, Ny])
                 # output = model(test_input_pe)
                 # temp = (output[:,0] * output[:,1]).reshape([reso, reso, reso])
@@ -471,15 +475,15 @@ def train():
                 # temp = pre_trans.cpu().data
 
                 temp_img = temp.max(axis = 1).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
 
                 temp_img = temp.max(axis = 0).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
 
                 temp_img = temp.max(axis = 2).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
         
         # log model
