@@ -122,9 +122,12 @@ def train():
     data_start = args.neglect_former_nums
     # data_end = nlos_data.shape[0] - args.neglect_back_nums
     data_end = args.neglect_back_nums
-    nlos_data = nlos_data[data_start:data_end,:]
+    # nlos_data = nlos_data[data_start:data_end,:]
     nlos_data = torch.Tensor(nlos_data).to(device)
     print(f'All bins < {data_start} and bins > {data_end} are neglected. Ignored data: {nlos_data.shape}')
+
+    if not args.scale:
+        nlos_data = nlos_data/100
 
     # Pre-process
     pmin = torch.Tensor([-(wall_size/2) - data_end * deltaT, -1e-7, -(wall_size/2) - data_end * deltaT]).float().to(device)
@@ -183,6 +186,11 @@ def train():
         psf = set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles = 7)
     # pdb.set_trace()
 
+    snr = args.snr
+    tmp = torch.mul(psf, torch.conj(psf))
+    tmp = tmp + 1/snr
+    invpsf = torch.mul(torch.conj(psf), 1/tmp)
+
     print('------------------------------------------')
     print('Training Begin')
 
@@ -194,8 +202,9 @@ def train():
         # random sampling and normalize
         # pdb.set_trace()
 
-        bin_batch = nlos_data.shape[0]
-        index_rand = torch.arange(0, nlos_data.shape[0])
+        bin_batch = Nx*Ny*(data_end-data_start)
+        # bin_batch = nlos_data.shape[0]
+        index_rand = torch.arange(0, bin_batch).to(device)
         # index_rand = torch.randint(0, nlos_data.shape[0], (bin_batch,))
     
         r_ = r + torch.rand(r.shape) * deltaT
@@ -229,23 +238,48 @@ def train():
 
         # pdb.set_trace()
         if args.shift:
-            cdt_conv = torch.fft.iirfftn(torch.mul(torch.fft.irfftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real
+            cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad, s=(Nz*2, Nx*2-1, Ny*2-1)), psf)).real.squeeze()
         else:
-            cdt_conv = torch.fft.iirfftn(torch.mul(torch.fft.irfftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real
-        predict_cdt = cdt_conv.squeeze()[:Nz,:Nx,:Ny]
-        predict_cdt = predict_cdt[data_start:data_end,:Nx,:Ny].reshape([-1,1])[index_rand].squeeze()
+            cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real.squeeze()
+        predict_cdt = cdt_conv[data_start:data_end,:Nx,:Ny]
+        predict_cdt = predict_cdt.reshape([-1,1])[index_rand].squeeze()
 
-        nlos_histogram = nlos_data[index_rand].squeeze()
-        # pre_histogram = network_res[nlos_histogram>=0]
+        nlos_data = nlos_data.reshape(Nz, Nx, Ny)
+        cdt_pad = torch.clone(cdt_conv).to(device)
+        cdt_pad[:Nz,:Nx,:Ny] = nlos_data
+
+        if args.shift:
+            cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
+        else:
+            # print("Magic here.")
+            cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
+
+        target_fft = torch.mul(cdt_pad_fft.to(device), invpsf.to(device))
+        target_nlos = torch.fft.ifftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
+
+        # pdb.set_trace()
+        nlos_histogram = nlos_data[data_start:data_end,...].flatten()
+        nlos_histogram = nlos_histogram[index_rand].squeeze()
         pre_histogram = predict_cdt[nlos_histogram>=0]
         nlos_histogram = nlos_histogram[nlos_histogram>=0]
 
+        trim = args.trim
+        target_nlos = target_nlos.to(device)
+        nlos_pad = nlos_pad.to(device)
+        if args.nlos_neglect_former_bins:
+            target_nlos = target_nlos[data_start:data_end,...]
+            nlos_pad = nlos_pad[data_start:data_end,...]
+
+        loss1 = criterion(nlos_pad.squeeze()[target_nlos>=0][:-trim], target_nlos[target_nlos>=0][:-trim])
 
         # update
-        # print(f"Fooooooooo: {pre_histogram.dtype, nlos_histogram.dtype}")
         loss = criterion(pre_histogram, nlos_histogram)
-        # loss = criterion(pre_histogram.double(), nlos_histogram.double())
-        # loss = criterion_l1(network_res, nlos_histogram)
+
+        if args.cdt_loss == "deconv":
+            loss = loss1
+        elif args.cdt_loss == "both":
+            loss = loss1+loss
+
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -274,6 +308,9 @@ def train():
         if (i+1) % i_hist == 0:
             plt.plot(nlos_histogram.cpu(), alpha = 0.5, label = 'data')
             plt.plot(pre_histogram.cpu().detach().numpy(), alpha = 0.5, label='predicted')
+            plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
+            plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
+            #      
             plt.title('Histogram_iter' + str(i+1))
             plt.legend(loc='upper right')
             plt.savefig(histogram_path + 'histogram_' + str(i+1))

@@ -201,7 +201,7 @@ def train():
             kernel[j,:,:,:] = kernel_tmp/(r**4)
 
         kernel_pad = torch.nn.functional.pad(kernel, [Ny//2-1, Ny//2, Nx//2-1, Nx//2, Nz//2, Nz//2], value=0)
-        kernel_rfft = torch.fft.iirfftn(kernel_pad.reshape(Nz,-1).flip(-1).reshape(Nz, Nz*2, Nx*3-2, Ny*3-2), dim=(1,2,3))
+        kernel_rfft = torch.fft.fftn(kernel_pad.reshape(Nz,-1).flip(-1).reshape(Nz, Nz*2, Nx*3-2, Ny*3-2), dim=(1,2,3))
 
     print(f'nlos kernel done')
 
@@ -209,12 +209,12 @@ def train():
     # fpsf = fpsf.to(device)
     grid_z = np.repeat(np.repeat(np.expand_dims(np.linspace(0,1,Nz),axis=(1,2)), Nx, axis=1), Ny, axis=2)
     grid_z = torch.from_numpy(grid_z.astype(np.float32))
-
+    
     if args.shift:
-        diffuse_psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device1, n_dipoles = 20)
+        diffuse_psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device1, n_dipoles = 7)
     else:
         diffuse_psf = set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device1, n_dipoles = 7)
-
+    # pdb.set_trace()
     snr = args.snr
     tmp = torch.mul(diffuse_psf, torch.conj(diffuse_psf))
     tmp = tmp + 1/snr
@@ -264,7 +264,7 @@ def train():
     loss_global = []
     time0 = time.time()
     for i in trange(0, N_iters):
-        ################################################################################
+        ################################################################################transient
         # pdb.set_trace()
         sigma, color = model(train_input_c, train_input_d)
         network_res = torch.mul(sigma, color)
@@ -279,8 +279,8 @@ def train():
             # vol_resample = network_res.permute([1, 0, 2])
 
             # convolution
-            vol_fft = torch.fft.iirfftn(vol_resample.to(device1),s=(Nz*2, Nx*2, Ny*2))
-            pre_trans = torch.fft.iiirfftn(torch.mul(vol_fft.to(device1), fpsf.to(device1))).real
+            vol_fft = torch.fft.fftn(vol_resample.to(device1),s=(Nz*2, Nx*2, Ny*2))
+            pre_trans = torch.fft.ifftn(torch.mul(vol_fft.to(device1), fpsf.to(device1)),s=(Nz*2, Nx*2, Ny*2)).real
 
             # unpad and resample transient
             pre_trans = pre_trans[:Nz,:Nx,:Ny].to(device)
@@ -292,8 +292,8 @@ def train():
         elif args.nlos_forward_model=="netf":
             vol_pad = F.pad(network_res, [0, 0, data_start, Nz-data_end, 0, 0]).permute([1, 0, 2])
             vol_pad = torch.nn.functional.pad(vol_pad, [Nx-1, Nx-1, Nx-1, Nx-1, Nz//2, Nz//2], value=0)
-            vol_rfft = torch.fft.iirfftn(vol_pad).cuda()
-            pre_trans = torch.fft.ifftshift(torch.fft.iiirfftn(torch.mul(vol_rfft, kernel_rfft), dim=(1,2,3)), dim=(1,2,3)).real[:,Nz,Nx-1:Nx*2-1,Nx-1:Nx*2-1]
+            vol_rfft = torch.fft.fftn(vol_pad).cuda()
+            pre_trans = torch.fft.ifftshift(torch.fft.ifftn(torch.mul(vol_rfft, kernel_rfft), dim=(1,2,3)), dim=(1,2,3)).real[:,Nz,Nx-1:Nx*2-1,Nx-1:Nx*2-1]
             pre_trans = pre_trans[data_start:data_end,...]
 
         nlos_pad = F.pad(pre_trans, [0, 0, 0, 0, data_start, Nz-data_end] )
@@ -303,15 +303,16 @@ def train():
         #     nlos_pad = torch.Tensor(tmp_data)[None, None, :, :, :]
         if args.shift:
             # nlos_pad = F.pad(nlos_pad, [0, Ny-1, 0, Nx-1, 0, Nz] )[None, None, :, :, :]
-            cdt_conv = torch.mul(torch.fft.iirfftn(nlos_pad.to(device1),s=(Nz*2, Nx*2-1, Ny*2-1)), diffuse_psf.to(device1))
+            cdt_conv = torch.mul(torch.fft.fftn(nlos_pad,s=(Nz*2, Nx*2-1, Ny*2-1)), diffuse_psf)
         else:
             # nlos_pad = F.pad(nlos_pad, [0, Ny, 0, Nx, 0, Nz] )[None, None, :, :, :]
-            cdt_conv = torch.mul(torch.fft.iirfftn(nlos_pad,s=(Nz*2, Nx*2, Ny*2)), diffuse_psf.to(device1))
-        predict_cdt = torch.fft.iiirfftn(cdt_conv.to(device),s=(Nz*2, Nx*2-1, Ny*2-1)).real.squeeze()
+            cdt_conv = torch.mul(torch.fft.fftn(nlos_pad,s=(Nz*2, Nx*2, Ny*2)), diffuse_psf)
+
+        predict_cdt = torch.fft.ifftn(cdt_conv).real.squeeze()
         # print('predict_cdt:',predict_cdt.min(),predict_cdt.max())
 
 
-        cdt_pad = torch.clone(predict_cdt).to(device1)
+        cdt_pad = torch.clone(predict_cdt)
         # cdt_pad = torch.zeros_like(predict_cdt)
         cdt_pad[:Nz,:Nx,:Ny] = nlos_data
         # pdb.set_trace()
@@ -325,10 +326,10 @@ def train():
         
 
         if args.shift:
-            cdt_pad_fft = torch.fft.iirfftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
+            cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
         else:
             # print("Magic here.")
-            cdt_pad_fft = torch.fft.iirfftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
+            cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
             
             # cdt_pad_fft = torch.fft.fftn(cdt_pad, s=(Nz*2, Nx*2, Ny*2))
             # temp = torch.load('./x_rfft.pt').cuda()
@@ -337,9 +338,9 @@ def train():
             # print(torch.sum(diff))
             # print("Magic done.")
 
-        # target_nlos = torch.fft.ifftn(torch.mul(cdt_pad_fft, invpsf)).real
+        # target_nlos = torch.fft.fftn(torch.mul(cdt_pad_fft, invpsf)).real
         target_fft = torch.mul(cdt_pad_fft.to(device), invpsf.to(device))
-        target_nlos = torch.fft.iiirfftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
+        target_nlos = torch.fft.ifftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
         # temp = torch.load('x_deconv.pt').cuda()
         # print(torch.sum((temp-target_nlos)**2))
         # temp = torch.load('./psf.pt').cuda()
@@ -356,7 +357,7 @@ def train():
         # nlos_pad = torch.zeros([Nz, Nx, Ny]).cuda()
         # nlos_pad[data_start:data_end,:,:] = data_pred
         # nlos_pad = data_pred
-        # cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad , s=(Nz*2, Nx*2-1, Ny*2-1)), diffusion_fpsf)).real
+        # cdt_conv = torch.fft.fftn(torch.mul(torch.fft.fftn(nlos_pad , s=(Nz*2, Nx*2-1, Ny*2-1)), diffusion_fpsf)).real
         # predict_cdt = cdt_conv.squeeze()[:Nz,:Nx,:Ny]
         # predict_cdt = cdt_conv.squeeze()[data_start:data_end,:Nx,:Ny]
         # predict_cdt = predict_cdt.reshape([Nz,-1])
@@ -466,7 +467,7 @@ def train():
                 # output = model(test_input_pe)
                 # temp = (output[:,0] * output[:,1]).reshape([reso, reso, reso])
                 # temp = (output[:,0] * output[:,1]).reshape([Nx, data_end-data_start, Ny])
-                # temp = torch.fft.ifftn(temp).real
+                # temp = torch.fft.fftn(temp).real
                 # temp = F.relu(temp)
                 temp = temp/temp.max()
                 # temp[:,-10:,:] = 0
