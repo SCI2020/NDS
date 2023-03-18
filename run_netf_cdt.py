@@ -42,8 +42,10 @@ def train():
     ################################################################################
     # Load data
     # c, mu_a, mu_s, ze, wall_size, zmax, zd
-    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, ze, zd = load_data(args.dataset_type, args.datadir)
+    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
     # nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny = load_data(args.dataset_type, args.datadir)
+    R = calculate_reflection_coeff(n)
+    ze = 2/3 * 1/mu_s * (1 + R) / (1 - R)
 
     volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
     volume_position = [0 , deltaT*Nz/2, 0]
@@ -308,8 +310,9 @@ def train():
         if (i+1) % i_hist == 0:
             plt.plot(nlos_histogram.cpu(), alpha = 0.5, label = 'data')
             plt.plot(pre_histogram.cpu().detach().numpy(), alpha = 0.5, label='predicted')
-            plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
-            plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
+            if not args.cdt_loss=="cdt":
+                plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
+                plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
             #      
             plt.title('Histogram_iter' + str(i+1))
             plt.legend(loc='upper right')

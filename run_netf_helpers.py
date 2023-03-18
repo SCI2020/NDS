@@ -258,8 +258,6 @@ def set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, zmax,
     # diffuser positioning
     xd = np.linspace(xmin*2, xmax*2, 2*Nx-1)[None, :, None]
     yd = np.linspace(ymin*2, ymax*2, 2*Ny-1)[None, None, :]
-    # xd = np.linspace(xmin*2, xmax*2, 2*Nx)[None, Nx-kernel_size:Nx+kernel_size, None]
-    # yd = np.linspace(ymin*2, ymax*2, 2*Ny)[None, None, Ny-kernel_size:Ny+kernel_size]
     t = np.linspace(0, 2*zmax, 2*Nz) / c
     t = t[:, None, None]
 
@@ -480,3 +478,29 @@ def resamplingOperator(Nz, device):
     invmtx = torch.pinverse(mtx.float(),1e-1).to(device)
 
     return invmtx, invmtxi, mtx, mtxi
+
+def calculate_reflection_coeff(n1):
+    '''
+    calculate reflection coefficient given the refractive indices of the
+    two materials. This is derived in
+    Zhu, J. X., D. J. Pine, and D. A. Weitz.
+    "Internal reflection of diffusive light in random media."
+    Physical Review A 44.6 (1991): 3948.
+    '''
+    # integrate to calculate c1 and c2
+    theta = np.linspace(0., np.pi/2, 501)
+    c1 = abs(np.trapz(fresnel(n1, theta)*np.sin(theta)*np.cos(theta), theta))
+    theta = -np.linspace(-np.pi/2, 0., 501)
+    c2 = abs(np.trapz(fresnel(n1, theta)*np.sin(theta)*np.cos(theta)**2, theta))
+    R = (3*c2 + 2*c1) / (3*c2 - 2*c1 + 2)
+    return R
+
+def fresnel(n, theta_i):
+    n0 = 1.
+    with np.errstate(invalid='ignore'):
+        theta_t = np.arcsin(n*np.sin(theta_i) / n0)
+        R = 0.5 * (np.sin(theta_i - theta_t)**2 / np.sin(theta_i + theta_t)**2 +
+                   np.tan(theta_i - theta_t)**2 / np.tan(theta_i + theta_t)**2)
+        R[theta_i == 0] = (n - n0)**2 / (n + n0)**2
+        R[np.arcsin(n0/n) < theta_i] = 1.
+    return R

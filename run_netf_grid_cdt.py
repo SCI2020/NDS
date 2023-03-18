@@ -51,8 +51,11 @@ def train():
     ################################################################################
     # Load data
     
-    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, ze, zd = load_data(args.dataset_type, args.datadir)
+    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
+    R = calculate_reflection_coeff(n)
+    ze = 2/3 * 1/mu_s * (1 + R) / (1 - R)
     nlos_data = nlos_data.reshape([Nz,Nx,Ny])
+
     # nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny = load_data(args.dataset_type, args.datadir)
 
     # volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
@@ -437,10 +440,11 @@ def train():
             # plt.plot(tmp_data[:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
             # plt.plot(target_nlos[:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')  
 
-            plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
-            # if args.check_data:
-            #     plt.plot(tmp_data[target_nlos.cpu()>=0][:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
-            plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
+            if not args.cdt_loss=="cdt":
+                plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
+                # if args.check_data:
+                #     plt.plot(tmp_data[target_nlos.cpu()>=0][:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
+                plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
             #      
             # plt.plot(tmp_data.flatten(), alpha = 0.5, label = 'nlos_data')
             # plt.plot(nlos_pad.squeeze().cpu().detach().numpy().flatten(), alpha = 0.5, label = 'nlos')
@@ -476,15 +480,15 @@ def train():
                 # temp = pre_trans.cpu().data
 
                 temp_img = temp.max(axis = 1).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 0).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 2).values
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
         
         # log model
