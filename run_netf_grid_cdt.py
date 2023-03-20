@@ -52,6 +52,12 @@ def train():
     # Load data
     
     nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
+
+    if args.n>0:
+        n = args.n
+        mu_a = args.mu_a
+        mu_s = args.mu_s
+
     R = calculate_reflection_coeff(n)
     ze = 2/3 * 1/mu_s * (1 + R) / (1 - R)
     nlos_data = nlos_data.reshape([Nz,Nx,Ny])

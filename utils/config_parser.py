@@ -99,4 +99,11 @@ def config_parser():
                         help='input data directory')
     parser.add_argument("--scale", action='store_true', default=True,
                         help='when True, the data has been shifted')
+    
+    parser.add_argument("--n", type=float, default=0, 
+                        help='learning rate decay rate')
+    parser.add_argument("--mu_a", type=float, default=0, 
+                        help='learning rate decay rate')
+    parser.add_argument("--mu_s", type=float, default=0, 
+                        help='learning rate decay rate')
     return parser
