@@ -395,7 +395,7 @@ def train():
             target_nlos = target_nlos[data_start:data_end,...]
             nlos_pad = nlos_pad[data_start:data_end,...]
 
-        loss1 = criterion(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu(), target_nlos[target_nlos>=0][:-trim].cpu())
+        loss1 = criterion(nlos_pad.squeeze()[target_nlos>=0][:-trim], target_nlos[target_nlos>=0][:-trim])
 
         # if loss<threshold:
         #    loss = loss1
