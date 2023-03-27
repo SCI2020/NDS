@@ -293,7 +293,7 @@ def train():
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
                 plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
                 plt.close()
-                # io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
+                io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
 
         # log recon obj
         if (i+1) % i_obj == 0:
