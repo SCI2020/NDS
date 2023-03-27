@@ -44,8 +44,16 @@ def train():
     # c, mu_a, mu_s, ze, wall_size, zmax, zd
     nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
     # nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny = load_data(args.dataset_type, args.datadir)
+
+    if args.n>0:
+        n = args.n
+        mu_a = args.mu_a
+        mu_s = args.mu_s
+        zd = args.zd
+
     R = calculate_reflection_coeff(n)
     ze = 2/3 * 1/mu_s * (1 + R) / (1 - R)
+    print(f"zd:{zd}, n:{n}, mu_a:{mu_a}, mu_s:{mu_s}")
 
     volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
     volume_position = [0 , deltaT*Nz/2, 0]

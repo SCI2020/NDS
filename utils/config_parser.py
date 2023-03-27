@@ -106,4 +106,6 @@ def config_parser():
                         help='learning rate decay rate')
     parser.add_argument("--mu_s", type=float, default=0, 
                         help='learning rate decay rate')
+    parser.add_argument("--zd", type=float, default=0, 
+                        help='learning rate decay rate')
     return parser
