@@ -17,8 +17,6 @@ from utils.config_parser import config_parser
 
 from utils.load_nlos import *
 from scipy import io
-import cv2
-
 
 import trimesh
 import mcubes
@@ -33,11 +31,6 @@ np.random.seed(seed)
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 # DEBUG = False
-def msemask(pre, gt, msk):
-    # if pre.shape[1] > 1:
-    #     msk = msk.repeat(1, pre.shape[1], 1, 1)
-    loss = (pre - gt) ** 2
-    return (loss * msk).sum() / msk.sum()
 
 def train():
 
@@ -169,7 +162,7 @@ def train():
     # Prepare log points and normalize the coords to [-1, 1]
     # reso = args.reso
     # reso = 
-    reso = 32
+    reso = 256
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso),
         torch.linspace(0, Nz * deltaT, reso),
@@ -280,55 +273,28 @@ def train():
                 temp[:,:data_start*reso//Nz,:] = 0
                 temp[:,data_end*reso//Nz:,:] = 0
 
-                vol = temp.cpu().data.numpy().squeeze()
-                res = 32
-                bike_gt =  cv2.imread(rf'./column_im.png')
-                bike_gt = cv2.cvtColor(bike_gt, cv2.COLOR_BGR2GRAY)
-                bike_gt = bike_gt/bike_gt.max()
-                bike_gt = cv2.resize(bike_gt,(res,res))
-                bike_gt = bike_gt.astype(np.float32)
-                bike_dep_gt = cv2.imread(rf'./column_dep.png')
-                bike_dep_gt = cv2.cvtColor(bike_dep_gt, cv2.COLOR_BGR2GRAY)
-                bike_dep_gt = bike_dep_gt/255.
-                bike_dep_gt = cv2.resize(bike_dep_gt,(res,res))
-                bike_dep_gt = bike_dep_gt.astype(np.float32)
-                maskgt = ((bike_dep_gt> 0 ) & (bike_gt > 0)).astype(np.float32)
-                depth = np.argmax(vol,axis=1)
-                resolution = vol.shape[0]
-                depth = resolution - depth
-                depth = depth.transpose(1,0)
-                depth = depth/resolution
-                front = np.max(vol,axis=1)
-                front = front.transpose(1,0)
-                front = front/front.max()
-                front =  cv2.resize(front,(res,res))
-                depth = cv2.resize(depth,(res,res))
-                depth_loss = msemask(depth, bike_dep_gt, maskgt)
-                print(f"depth_loss:{depth_loss}")
+                temp_img = temp.max(axis = 1).values
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.close()
 
-                if i>300 and depth_loss>0.05809171598928708:
-                    temp_img = temp.max(axis = 1).values
-                    # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    # plt.axis('off')
-                    # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
-                    plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    plt.close()
+                temp_img = temp.max(axis = 0).values
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.close()
 
-                    temp_img = temp.max(axis = 0).values
-                    # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    # plt.axis('off')
-                    # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
-                    plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    plt.close()
-
-                    temp_img = temp.max(axis = 2).values
-                    # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    # plt.axis('off')
-                    # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
-                    plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
-                    plt.close()
-                    io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
-
+                temp_img = temp.max(axis = 2).values
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.axis('off')
+                # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.close()
+                io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
+                
         # log recon obj
         if (i+1) % i_obj == 0:
             with torch.no_grad():
