@@ -65,8 +65,6 @@ def config_parser():
                         help='use occlusion in forward model or not')  
     parser.add_argument("--loss", type=str, default='mse', 
                         help='encoding type for position')
-    # parser.add_argument("--snr", type=float, default=1e10, 
-    #                     help='learning rate decay rate')
     
     # log options 
     parser.add_argument("--i_loss", type=int, default=100, 
@@ -86,32 +84,30 @@ def config_parser():
     
     # cdt options 
     parser.add_argument("--loss_type", type=str, default='cdt', 
-                        help='when True, the data has been shifted')
+                        help='using backward loss or not')
     parser.add_argument("--snr", type=float, default=1e10, 
-                        help='learning rate decay rate')
+                        help='SNR in wiener filter')
     parser.add_argument("--trim", type=int, default=5000, 
-                        help='num of iters to log print') 
+                        help='The length of the value is discarded at the backward - loss step') 
     parser.add_argument("--nlos_neglect_former_bins", action='store_true', default = False, 
                         help='when True, those former histogram bins will be neglected and not used in optimization. The threshold is computed automatically to ensure that neglected bins are zero')
     parser.add_argument("--noise", action='store_true', default = False , 
                         help='add noise to data or not')
-    parser.add_argument("--nlos_forward_model", type=str, default='lct', 
-                        help='input data directory')
     parser.add_argument("--scale", action='store_true', default=True,
                         help='when True, the data has been shifted')
     parser.add_argument("--padding", action='store_true', default=False,
-                        help='when True, the data has been shifted')
+                        help='when True, the data will been padded in decovlution')
 
     parser.add_argument("--n", type=float, default=0, 
-                        help='learning rate decay rate')
+                        help='refractive index')
     parser.add_argument("--mu_a", type=float, default=0, 
-                        help='learning rate decay rate')
+                        help='absorption coefficient')
     parser.add_argument("--mu_s", type=float, default=0, 
-                        help='learning rate decay rate')
+                        help='scattering coefficient')
     parser.add_argument("--zd", type=float, default=0, 
-                        help='learning rate decay rate')
+                        help='thickness of the scattering medium')
     parser.add_argument("--n_dipoles", type=int, default=0, 
-                        help='learning rate decay rate')
+                        help='number of dipoles')
     
     parser.add_argument("--model_path", type=str, default='./logs/', 
                         help='where to store ckpts and logs')

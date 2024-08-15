@@ -46,7 +46,11 @@ pip install .
 ## Train
 
 ```bash
-python run_netf_cdt.py --config <path to config>
+python run.py --config <path to config>
+```
+Example:
+```bash
+python run.py --config <path to config>
 ```
 Parameters are modified in the config file.
 
@@ -54,11 +58,12 @@ Explanation:
 
 - `expname` experiment name
 - `basedir` where to store ckpts and logs
-- `datadir` where to store ckpts and logs
+- `datadir` input data directory
 - `dataset_type` options: nlos / genrated
 - `neglect_zero_bins` when True, those zero histogram bins - will be neglected and not used in optimization. The - threshold is computed automatically to ensure that n eglected -bins are zero
 - `neglect_former_nums` nums of former values ignored
 - `neglect_back_nums` nums of back values ignored
+
 - `encoding` encoding type for position
 - `encoding_dir` encoding type for direction
 - `num_layers` the number of layers for sigma
@@ -75,6 +80,14 @@ Explanation:
 - `lrate` learning rate
 - `lr_decay_rate` learning rate decay rate
 - `sampling_points_nums` number of sampling points in one direction, so the number of all sampling points is the square of this value
+- `n` refractive index
+- `mu_a` absorption coefficient
+    parser.add_argument("--mu_s", type=float, default=0, 
+                        help='scattering coefficient')
+    parser.add_argument("--zd", type=float, default=0, 
+                        help='thickness of the scattering medium')
+    parser.add_argument("--n_dipoles", type=int, default=0, 
+                        help='number of dipoles')
 
 ### Train
 
