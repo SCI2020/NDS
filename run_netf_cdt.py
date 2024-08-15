@@ -45,15 +45,23 @@ def train():
     nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
     # nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny = load_data(args.dataset_type, args.datadir)
 
+    if args.padding:
+        Nz,Nx,Ny = Nz//2,Nx//2+1,Ny//2+1
+
+    n_dipoles = 7
     if args.n>0:
         n = args.n
         mu_a = args.mu_a
         mu_s = args.mu_s
         zd = args.zd
 
+    if args.n_dipoles>0:
+        n_dipoles = args.n_dipoles
+
     R = calculate_reflection_coeff(n)
     ze = 2/3 * 1/mu_s * (1 + R) / (1 - R)
-    print(f"zd:{zd}, n:{n}, mu_a:{mu_a}, mu_s:{mu_s}")
+    ze = math.floor(ze*10**4) / 10**4 
+    print(f"zd:{zd}, n:{n}, mu_a:{mu_a}, mu_s:{mu_s}, ze:{ze}, n_dipoles:{n_dipoles}")
 
     volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
     volume_position = [0 , deltaT*Nz/2, 0]
@@ -129,6 +137,7 @@ def train():
 
     ################################################################################
     # ignore some useless bins
+    # add auto neglect
     data_start = args.neglect_former_nums
     # data_end = nlos_data.shape[0] - args.neglect_back_nums
     data_end = args.neglect_back_nums
@@ -173,8 +182,8 @@ def train():
     ################################################################################
     # Prepare log points and normalize the coords to [-1, 1]
     # reso = args.reso
-    # reso = 256
-    reso = 64
+    reso = 128
+    # reso = 64
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso),
         torch.linspace(0, Nz * deltaT, reso),
@@ -190,8 +199,23 @@ def train():
     # test_input_coord = (test_input_coord - pmin) / (pmax - pmin)
     # test_input_dir = (test_input_dir - pmin_dir) / (pmax_dir - pmin_dir)
     
+    reso_32 = 32
+    # reso = 64
+    input_x, input_y, input_z = torch.meshgrid(
+        torch.linspace(-(wall_size / 2), (wall_size / 2), reso_32),
+        torch.linspace(0, Nz * deltaT, reso_32),
+        # torch.linspace(data_start * deltaT, data_end * deltaT, reso),
+        torch.linspace(-(wall_size / 2), (wall_size / 2), reso_32)
+    )
+    input_x = input_x.reshape([-1, 1])
+    input_y = input_y.reshape([-1, 1])
+    input_z = input_z.reshape([-1, 1])
+    test_input_coord_32 = torch.cat((input_x, input_y, input_z), axis = 1)
+    test_input_dir_32 = torch.cat((torch.zeros_like(input_x), torch.ones_like(input_x), torch.zeros_like(input_x)), axis = 1)
+    test_input_coord_32 = (test_input_coord_32 - pmin) / (pmax - pmin) * 2 - 1
+
     if args.shift:
-        psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles = 20)
+        psf = set_cdt_completekernel_torch(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles)
     else:
         psf = set_cdt_completekernel_noshift(Nx, Ny, Nz, c, mu_a, mu_s, ze, wall_size, Nz*deltaT*2, zd, device, n_dipoles = 7)
     # pdb.set_trace()
@@ -200,6 +224,10 @@ def train():
     tmp = torch.mul(psf, torch.conj(psf))
     tmp = tmp + 1/snr
     invpsf = torch.mul(torch.conj(psf), 1/tmp)
+    psf_snr = psf + 1/snr
+
+    if args.loss_type == "snr":
+        psf = psf_snr
 
     print('------------------------------------------')
     print('Training Begin')
@@ -254,9 +282,15 @@ def train():
         predict_cdt = cdt_conv[data_start:data_end,:Nx,:Ny]
         predict_cdt = predict_cdt.reshape([-1,1])[index_rand].squeeze()
 
-        nlos_data = nlos_data.reshape(Nz, Nx, Ny)
+        if args.padding:
+            nlos_data = nlos_data.reshape(Nz, Nx, Ny)
+        else:
+            nlos_data = nlos_data.reshape(Nz*2, Nx*2-1, Ny*2-1)
+        
         cdt_pad = torch.clone(cdt_conv).to(device)
-        cdt_pad[:Nz,:Nx,:Ny] = nlos_data
+        
+        if not args.padding:
+            cdt_pad[:Nz,:Nx,:Ny] = nlos_data
 
         if args.shift:
             cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
@@ -265,30 +299,46 @@ def train():
             cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2, Ny*2))
 
         target_fft = torch.mul(cdt_pad_fft.to(device), invpsf.to(device))
-        target_nlos = torch.fft.ifftn(target_fft).real.squeeze()[:Nz,:Nx,:Ny]
+        target_nlos = torch.fft.ifftn(target_fft).real.squeeze()
+
+        if not args.loss_type == "sparse":
+            padding_nlos = target_nlos.clone()
+            target_nlos = target_nlos[:Nz,:Nx,:Ny]
+            padding_nlos[data_start:data_end,:Nx,:Ny] = 0
 
         # pdb.set_trace()
-        nlos_histogram = nlos_data[data_start:data_end,...].flatten()
-        nlos_histogram = nlos_histogram[index_rand].squeeze()
+
+        if args.padding:
+            nlos_histogram = nlos_data.flatten()
+        else:
+            nlos_histogram = nlos_data[data_start:data_end,...].flatten()
+            nlos_histogram = nlos_histogram[index_rand].squeeze()
+
         pre_histogram = predict_cdt[nlos_histogram>=0]
         nlos_histogram = nlos_histogram[nlos_histogram>=0]
 
         trim = args.trim
         target_nlos = target_nlos.to(device)
         nlos_pad = nlos_pad.to(device)
-        if args.nlos_neglect_former_bins:
-            target_nlos = target_nlos[data_start:data_end,...]
-            nlos_pad = nlos_pad[data_start:data_end,...]
+
+        # pdb.set_trace()
+        target_nlos = target_nlos[data_start:data_end,...]
+        # padding_nlos[data_start:data_end,...] = 0
+        nlos_pad = nlos_pad[data_start:data_end,...]
 
         loss1 = criterion(nlos_pad.squeeze()[target_nlos>=0][:-trim], target_nlos[target_nlos>=0][:-trim])
 
         # update
         loss = criterion(pre_histogram, nlos_histogram)
 
-        if args.cdt_loss == "deconv":
+        if args.loss_type == "deconv":
             loss = loss1
-        elif args.cdt_loss == "both":
+        elif args.loss_type == "both":
             loss = loss1+loss
+        # elif args.loss_type == "sparse":
+        #     loss = loss1+loss+torch.sum(padding_nlos**2)*1e-5
+
+        # pdb.set_trace()
 
         loss.backward()
         optimizer.step()
@@ -318,7 +368,7 @@ def train():
         if (i+1) % i_hist == 0:
             plt.plot(nlos_histogram.cpu(), alpha = 0.5, label = 'data')
             plt.plot(pre_histogram.cpu().detach().numpy(), alpha = 0.5, label='predicted')
-            if not args.cdt_loss=="cdt":
+            if not args.loss_type=="cdt":
                 plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
                 plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
             #      
@@ -339,26 +389,45 @@ def train():
                 temp[:,data_end*reso//Nz:,:] = 0
 
                 temp_img = temp.max(axis = 1).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                # plt.axis('off')
-                # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
                 plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 0).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                # plt.axis('off')
-                # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
                 plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 2).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
-                # plt.axis('off')
-                # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
                 plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
                 io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
+
+                temp = temp_sigma.reshape([reso, reso, reso])
+                temp_img = temp.max(axis = 1).values
+                plt.imsave(img_path + 'result_sigma_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+
+                temp_img = temp.max(axis = 0).values
+                plt.imsave(img_path + 'result_sigma_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+
+                temp_img = temp.max(axis = 2).values
+                plt.imsave(img_path + 'result_sigma_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+                io.savemat(result_path + 'sigma_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
+
+                temp = temp_color.reshape([reso, reso, reso])
+                temp_img = temp.max(axis = 1).values
+                plt.imsave(img_path + 'result_color_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+
+                temp_img = temp.max(axis = 0).values
+                plt.imsave(img_path + 'result_color_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+
+                temp_img = temp.max(axis = 2).values
+                plt.imsave(img_path + 'result_color_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
+                plt.close()
+                io.savemat(result_path + 'color_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
 
         # log recon obj
         if (i+1) % i_obj == 0:

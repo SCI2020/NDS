@@ -1,0 +1,42 @@
+expname = tree4_z_-1_32_0.015_nonconfocal_2
+basedir = ./logs/cudaGL_wiener/
+
+datadir = ./data/tree4_z_-1_32_0.015_nonconfocal/tree4_z_-1_deconv_shift_32_0_015_snr_1202604_2841647768_n_1_12.mat
+dataset_type = cdt
+
+neglect_zero_bins = True
+neglect_former_nums = 61
+neglect_back_nums = 128
+
+tcnn = False
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 2
+hidden_dim = 8
+geo_feat_dim = 7
+num_layers_color = 3
+hidden_dim_color = 8
+
+bound = 1
+reso = 64
+
+snr = 1e8
+shift = True
+trim = 3000
+loss_type = both
+scale_data = True
+
+N_iters = 10000
+bin_batch= 2048
+lrate = 1e-4
+lr_decay_rate = 0.1
+sampling_points_nums = 33
+
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 100000
+i_print = 100
+i_obj = 1000
+obj_threshold = 0.1

@@ -1,0 +1,46 @@
+expname = M_guijiao_0.8_cdt_32_0.0192_2023_3_31_4
+basedir = ./logs/real_data_wiener/M_guijiao_0.8_cdt_32_0.0192_2023_3_31_iqi/
+
+datadir = ./data/iqi_real/M_guijiao_0.8_cdt_32_0.0192_2023_3_31.mat
+dataset_type = cdt
+
+neglect_zero_bins = True
+neglect_former_nums = 40
+neglect_back_nums = 128
+
+tcnn = False
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 2
+hidden_dim = 16
+geo_feat_dim = 15
+num_layers_color = 3
+hidden_dim_color = 16
+
+bound = 1
+reso = 64
+shift = True
+scale_data = True
+
+trim = 10000
+snr = 1e2
+loss_type = both 
+
+N_iters = 10000
+bin_batch= 1024
+lrate = 1e-4
+lr_decay_rate = 0.1
+sampling_points_nums = 33
+
+n = 1.4
+mu_a = 20.4
+mu_s = 342.5
+zd = 0.01
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 1000
+i_print = 100
+i_obj = 1000
+obj_threshold = 0.1

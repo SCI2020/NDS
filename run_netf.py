@@ -45,6 +45,11 @@ def train():
     # if not args.scale_data:
     #     nlos_data = nlos_data/100
 
+    n_dipoles = 7
+    if args.n_dipoles>0:
+        n_dipoles = args.n_dipoles
+    print(f"n_dipoles:{n_dipoles}")
+    
     volume_size = np.array([wall_size/2]),np.array([deltaT*Nz/2]),np.array([wall_size/2])
     volume_position = [0 , deltaT*Nz/2, 0]
 
@@ -162,7 +167,7 @@ def train():
     # Prepare log points and normalize the coords to [-1, 1]
     # reso = args.reso
     # reso = 
-    reso = 256
+    reso = 64
     input_x, input_y, input_z = torch.meshgrid(
         torch.linspace(-(wall_size / 2), (wall_size / 2), reso),
         torch.linspace(0, Nz * deltaT, reso),
@@ -274,27 +279,27 @@ def train():
                 temp[:,data_end*reso//Nz:,:] = 0
 
                 temp_img = temp.max(axis = 1).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_XOY')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOY.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 0).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_Y0Z')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_YOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
 
                 temp_img = temp.max(axis = 2).values
-                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                # plt.imshow(temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 # plt.axis('off')
                 # plt.savefig(img_path + 'result_' + str(i+1) + '_X0Z')
-                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='RdPu')
+                plt.imsave(img_path + 'result_' + str(i+1) + '_XOZ.png', temp_img.cpu().data.numpy().squeeze(), cmap='gray')
                 plt.close()
                 io.savemat(result_path + 'vol_' + str(i+1) + '.mat' , {'res_vol': temp.cpu().data.numpy().squeeze()})
-                
+
         # log recon obj
         if (i+1) % i_obj == 0:
             with torch.no_grad():

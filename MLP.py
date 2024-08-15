@@ -135,6 +135,7 @@ class NGPNetwork(torch.nn.Module):
         h = x
         for l in range(self.num_layers):
             h = self.sigma_net[l](h)
+            # print(f"H.szie:h{h.shape}")
             if l != self.num_layers - 1:
                 h = F.relu(h, inplace=True)
         # pdb.set_trace()
@@ -152,6 +153,7 @@ class NGPNetwork(torch.nn.Module):
         h = torch.cat([d, geo_feat], dim=-1)
         for l in range(self.num_layers_color):
             h = self.color_net[l](h)
+            # print(f"H_color.szie:h{h.shape}")
             if l != self.num_layers_color - 1:
                 h = F.relu(h, inplace=True)
         # pdb.set_trace()

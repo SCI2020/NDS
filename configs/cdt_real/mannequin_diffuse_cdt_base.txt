@@ -1,0 +1,35 @@
+expname = mannequin_diffuse_cdt_base
+basedir = ./logs/real_data/mannequin_cdt_32_0.015/
+
+datadir = ./data/cdt_real/mannequin_cdt_32_0.015.mat
+dataset_type = cdt
+
+neglect_zero_bins = True
+neglect_former_nums = 41
+neglect_back_nums = 128
+
+tcnn = False
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 2
+hidden_dim = 16
+geo_feat_dim = 15
+num_layers_color = 3
+hidden_dim_color = 16
+bound = 1
+reso = 64
+shift = True
+
+N_iters = 5000
+bin_batch= 1024
+lrate = 1e-3
+lr_decay_rate = 0.9
+sampling_points_nums = 33
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 100000
+i_print = 100
+i_obj = 1000
+obj_threshold = 0.1

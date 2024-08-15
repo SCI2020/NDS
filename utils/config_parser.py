@@ -85,7 +85,7 @@ def config_parser():
                         help='threshold for obj extraction')    
     
     # cdt options 
-    parser.add_argument("--cdt_loss", type=str, default='cdt', 
+    parser.add_argument("--loss_type", type=str, default='cdt', 
                         help='when True, the data has been shifted')
     parser.add_argument("--snr", type=float, default=1e10, 
                         help='learning rate decay rate')
@@ -99,7 +99,9 @@ def config_parser():
                         help='input data directory')
     parser.add_argument("--scale", action='store_true', default=True,
                         help='when True, the data has been shifted')
-    
+    parser.add_argument("--padding", action='store_true', default=False,
+                        help='when True, the data has been shifted')
+
     parser.add_argument("--n", type=float, default=0, 
                         help='learning rate decay rate')
     parser.add_argument("--mu_a", type=float, default=0, 
@@ -108,4 +110,9 @@ def config_parser():
                         help='learning rate decay rate')
     parser.add_argument("--zd", type=float, default=0, 
                         help='learning rate decay rate')
+    parser.add_argument("--n_dipoles", type=int, default=0, 
+                        help='learning rate decay rate')
+    
+    parser.add_argument("--model_path", type=str, default='./logs/', 
+                        help='where to store ckpts and logs')
     return parser

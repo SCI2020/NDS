@@ -401,9 +401,9 @@ def train():
         #    loss = loss1
 
         # loss = loss1
-        if args.cdt_loss == "deconv":
+        if args.loss_type == "deconv":
             loss = loss1
-        elif args.cdt_loss == "both":
+        elif args.loss_type == "both":
             loss = loss1+loss
             
         # if args.check_data:
@@ -436,6 +436,9 @@ def train():
             # tmp = F.pad(nlos_data,[0,Ny,0,Nx,0,Nz])
             plt.plot(nlos_histogram.cpu().detach().numpy().flatten(), alpha = 0.5, label = 'data')
             plt.plot(predict_histogram.cpu().detach().numpy().flatten(), alpha = 0.5, label='predicted')
+            plt.legend()
+            plt.savefig(loss_path + 'cdt_' + str(i+1) + '_histogram')
+            plt.close()
             # plt.plot(tmp_data.squeeze()[data_start:data_end,...].flatten(), alpha = 0.5, label = 'nlos')
 
             # plt.plot(tmp.cpu().detach().numpy().flatten(), alpha = 0.5, label = 'data')
@@ -446,17 +449,27 @@ def train():
             # plt.plot(tmp_data[:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
             # plt.plot(target_nlos[:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')  
 
-            if not args.cdt_loss=="cdt":
+            tmp_data = scio.loadmat(rf'./data/cudaGL/S_cudaGL_32_0.015.mat')['data']
+            tmp_data = np.transpose(tmp_data, [2, 1, 0])
+            tmp_data = tmp_data/tmp_data.max()*target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().max()
+            
+            # if not args.loss_type=="cdt":
+            if args.loss_type=="cdt":
+                # nlos_pad = nlos_pad/nlos_pad.max()
+                plt.plot(nlos_pad.squeeze().cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')             
+                plt.plot(tmp_data.flatten(), alpha = 0.5, label = 'nlos_data')     
+            else:
                 plt.plot(nlos_pad.squeeze()[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'pred_nlos')
-                # if args.check_data:
-                #     plt.plot(tmp_data[target_nlos.cpu()>=0][:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
-                plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')       
+            # if args.check_data:
+            #     plt.plot(tmp_data[target_nlos.cpu()>=0][:-trim].flatten(), alpha = 0.5, label = 'nlos_data')
+                plt.plot(target_nlos[target_nlos>=0][:-trim].cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')     
+                plt.plot(tmp_data.flatten(), alpha = 0.5, label = 'nlos_data')     
             #      
             # plt.plot(tmp_data.flatten(), alpha = 0.5, label = 'nlos_data')
             # plt.plot(nlos_pad.squeeze().cpu().detach().numpy().flatten(), alpha = 0.5, label = 'nlos')
             # plt.plot(target_nlos.cpu().detach().numpy().flatten(), alpha = 0.5, label = 'target_nlos')
             plt.legend()
-            plt.savefig(loss_path + str(i+1) + 'histogram')
+            plt.savefig(loss_path + 'nlos_' + str(i+1) + '_histogram')
             plt.close()
 
         # log recon result

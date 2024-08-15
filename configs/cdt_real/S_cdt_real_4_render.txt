@@ -1,0 +1,35 @@
+expname = run_netf_S_cdt_real_4_0
+basedir = ./logs/cdt_real/
+
+datadir = ./data/real/S_cdt_real.mat
+dataset_type = cdt
+neglect_zero_bins = True
+neglect_former_nums = 0
+neglect_back_nums = 128
+
+tcnn = False
+encoding = hashgrid
+encoding_dir = sphere_harmonics
+num_layers = 2
+hidden_dim = 16
+geo_feat_dim = 15
+num_layers_color = 3
+hidden_dim_color = 16
+bound = 1
+reso = 64
+
+N_iters = 5000
+bin_batch= 1024
+lrate = 5e-3
+lr_decay_rate = 0.9
+sampling_points_nums = 33
+
+i_loss = 100
+i_hist = 100
+i_image = 100
+i_model = 100000
+i_print = 100
+i_obj = 1000
+obj_threshold = 0.1
+
+model_path = ./logs/real_data_wiener/S_cdt_real/run_netf_S_cdt_real_4/model_5000.pt

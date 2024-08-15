@@ -1,8 +1,10 @@
-# Neural Transient Field(NeTF)
-This repository is based on [torch-ngp] https://github.com/ashawkey/torch-ngp and [NeTF] https://github.com/SCI2020/NeTF. 
+# Neural Reconstruction through Scattering Media with Forward and Backward Losses
+
+![](assets/teaser.png)
+
+## [Project page](https://github.com/hazelzz/netf-torch-ngp/) | [Paper](https://ieeexplore.ieee.org/abstract/document/10233796) 
 
 ## Install
-
 ### Install with pip
 ```bash
 pip install -r requirements.txt
@@ -40,42 +42,49 @@ pip install .
 |   ├── experiment 2
 |   |   └── ...
 ```
+
 ## Train
 
+```bash
+python run_netf_cdt.py --config <path to config>
 ```
-CUDA_VISIBLE_DEVICES=0 python run_netf.py --config configs/xxx
-```
+Parameters are modified in the config file.
 
-## Args
-```
-expname = run_netf_bunny_diffuse    # experiment name
-basedir = ./logs/bunny/     # dir to save experiment
+Explanation: 
 
-datadir = ./data/bunny_diffuse_zaragoza_256.mat     # data dir
-dataset_type = nlos     # data type
-neglect_zero_bins = True    # if neglect useless bins or not
-neglect_former_nums = 100   # cut bins nums from start
-neglect_back_nums = 112     # cut bins nums from end
+- `expname` experiment name
+- `basedir` where to store ckpts and logs
+- `datadir` where to store ckpts and logs
+- `dataset_type` options: nlos / genrated
+- `neglect_zero_bins` when True, those zero histogram bins - will be neglected and not used in optimization. The - threshold is computed automatically to ensure that n eglected -bins are zero
+- `neglect_former_nums` nums of former values ignored
+- `neglect_back_nums` nums of back values ignored
+- `encoding` encoding type for position
+- `encoding_dir` encoding type for direction
+- `num_layers` the number of layers for sigma
+- `hidden_dim` the dimmension of hidden layer for sigma net
+- `geo_feat_dim` the dimmension of geometric feature
+- `num_layers_color` the number of layers for color
+- `hidden_dim_color` the dimmension of hidden layer for color - net
+- `bound` boundry of the scene
+- `reso` the result resolution
+- `trim` The length of the value is discarded at the backward - loss step 
+- `snr` SNR in wiener filter 
+- `loss_type` use only forward, backward only, or both
+- `N_iters` num of training iters
+- `lrate` learning rate
+- `lr_decay_rate` learning rate decay rate
+- `sampling_points_nums` number of sampling points in one direction, so the number of all sampling points is the square of this value
 
-encoding = hashgrid     # encoding type for positions
-encoding_dir = sphere_harmonics      # encoding type for directions
-num_layers = 2      # layer nums for sigma layer
-hidden_dim = 64     # hidden dim for sigma layer
-geo_feat_dim = 15   # hidden dim for sigma feature
-num_layers_color = 3    # layer nums for color layer
-hidden_dim_color = 64   # hidden dim for color layer
-bound = 1   # scene boundary
-reso = 64   # reconstruction rsolution
+### Train
 
-N_iters = 1000      # total train iterations
-bin_batch= 1024     # num of bins per iteration
-lrate = 2e-3        # start lr
-lr_decay_rate = 0.1    # lr decay
-sampling_points_nums = 37   # num of points per bin
+### Train
 
-i_loss = 100   # log step for loss
-i_hist = 100   # log step for histogram
-i_image = 100  # log step for recon image
-i_model = 1000  # log step for model
-i_print = 1000  # log step for print
-```
+
+## Acknowledgement
+
+We have intensively borrow codes from the following repositories. Many thanks to the authors for sharing their codes.
+
+- [torch-ngp] https://github.com/ashawkey/torch-ngp
+- [NeTF] https://github.com/SCI2020/NeTF 
+- [confocal-diffuse-tomography] https://github.com/computational-imaging/confocal-diffuse-tomography
