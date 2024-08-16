@@ -1,7 +1,7 @@
-expname = run_bike_nonconfocal_cdt_shift_32_0.015_1_render
+expname = run_bike_nonconfocal_cdt_shift_32_0.015_1
 basedir = ./logs/cudaGL_wiener/
 
-datadir = ./data/bike_32_0.015_nonconfocal/bike_nonconfocal_cdt_shift_32_0.015.mat
+datadir = ./data/bike_nonconfocal_cdt_shift_32_0.015.mat
 dataset_type = cdt
 neglect_zero_bins = True
 neglect_former_nums = 30
