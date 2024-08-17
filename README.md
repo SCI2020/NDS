@@ -19,15 +19,8 @@ pip install .
 ```bash
 
 pip install -r requirements.txt
-
-# (optional) install the tcnn backbone
 ```
 
-<!-- ### Install with conda
-```bash
-conda env create -f environment.yml
-conda activate torch-ngp
-``` -->
 
 ### Install encodings
 ```bash
@@ -52,6 +45,8 @@ pip install .
 |   ├── experiment 2
 |   |   └── ...
 ```
+
+## Data
 
 ## Train
 

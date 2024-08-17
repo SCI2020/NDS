@@ -19,7 +19,7 @@ class _freq_encoder(Function):
         # inputs: [B, input_dim], float 
         # RETURN: [B, F], float
 
-        if not inputs.is_cuda: inputs = inputs.cuda()
+        if not inputs.is_cuda: inputs = inputs.to(device)
         inputs = inputs.contiguous()
 
         B, input_dim = inputs.shape # batch size, coord dim

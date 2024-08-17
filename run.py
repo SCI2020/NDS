@@ -25,10 +25,12 @@ seed = 3407
 torch.manual_seed(seed)            # 为CPU设置随机种子
 torch.cuda.manual_seed(seed)       # 为当前GPU设置随机种子
 torch.cuda.manual_seed_all(seed)   # 为所有GPU设置随机种子
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 np.random.seed(seed)
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+print('CUDA:', os.environ['CUDA_VISIBLE_DEVICES'])
 
 def train():
 
@@ -184,7 +186,7 @@ def train():
     input_x = input_x.reshape([-1, 1])
     input_y = input_y.reshape([-1, 1])
     input_z = input_z.reshape([-1, 1])
-    test_input_coord = torch.cat((input_x, input_y, input_z), axis = 1)
+    test_input_coord = torch.cat((input_x, input_y, input_z), axis = 1).to(device)
     test_input_dir = torch.cat((torch.zeros_like(input_x), torch.ones_like(input_x), torch.zeros_like(input_x)), axis = 1)
     test_input_coord = (test_input_coord - pmin) / (pmax - pmin) * 2 - 1
     # test_input_coord = (test_input_coord - pmin) / (pmax - pmin)
@@ -201,7 +203,7 @@ def train():
     input_x = input_x.reshape([-1, 1])
     input_y = input_y.reshape([-1, 1])
     input_z = input_z.reshape([-1, 1])
-    test_input_coord_32 = torch.cat((input_x, input_y, input_z), axis = 1)
+    test_input_coord_32 = torch.cat((input_x, input_y, input_z), axis = 1).to(device)
     test_input_dir_32 = torch.cat((torch.zeros_like(input_x), torch.ones_like(input_x), torch.zeros_like(input_x)), axis = 1)
     test_input_coord_32 = (test_input_coord_32 - pmin) / (pmax - pmin) * 2 - 1
 
@@ -233,7 +235,8 @@ def train():
         bin_batch = Nx*Ny*(data_end-data_start)
         index_rand = torch.arange(0, bin_batch).to(device)
         r_ = r + torch.rand(r.shape) * deltaT
-        input_coord, input_dir, theta, _, _, _, r_batch, cut_index = spherical_sample_bin_tensor_bbox(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums, volume_position, volume_size)
+        r_ = r_.to(device)
+        input_coord, input_dir, theta, _, _, _, r_batch, cut_index = spherical_sample_bin_tensor_bbox(camera_grid_positions[:,index_rand], r_[index_rand].squeeze(), args.sampling_points_nums, volume_position, volume_size, device)
         sin_theta = torch.sin(theta)
         input_coord = (input_coord - pmin) / (pmax - pmin) * 2 - 1
 

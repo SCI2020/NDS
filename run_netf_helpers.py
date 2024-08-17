@@ -28,8 +28,8 @@ def spherical_sample_bin_tensor(camera_grid_positions, r, num_sampling_points):
     # 球坐标图像参考 Wikipedia 球坐标系词条 ISO 约定
     # theta 是 俯仰角，与 Z 轴正向的夹角， 范围从 [0,pi]
     # phi 是 在 XOY 平面中与 X 轴正向的夹角， 范围从 [-pi,pi],本场景中只用到 [0,pi]
-    theta = torch.linspace(0, np.pi , num_sampling_points).cuda()
-    phi = torch.linspace(0, np.pi, num_sampling_points).cuda()
+    theta = torch.linspace(0, np.pi , num_sampling_points).to(device)
+    phi = torch.linspace(0, np.pi, num_sampling_points).to(device)
     
     dtheta = (np.pi) / num_sampling_points
     dphi = (np.pi) / num_sampling_points
@@ -56,23 +56,23 @@ def spherical_sample_bin_tensor(camera_grid_positions, r, num_sampling_points):
     return cartesian, direction, spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]), dtheta, dphi, r
     
 # Spherical Sampling
-def spherical_sample_bin_tensor_bbox(camera_grid_positions, r, num_sampling_points, volume_position, volume_size):
+def spherical_sample_bin_tensor_bbox(camera_grid_positions, r, num_sampling_points, volume_position, volume_size, device):
     [x0,y0,z0] = [camera_grid_positions[0,:],camera_grid_positions[1,:],camera_grid_positions[2,:]]
 
     # 直角坐标图像参考 Zaragoza 数据集中的坐标系
     # 球坐标图像参考 Wikipedia 球坐标系词条 ISO 约定
     # theta 是 俯仰角，与 Z 轴正向的夹角， 范围从 [0,pi]
     # phi 是 在 XOY 平面中与 X 轴正向的夹角， 范围从 [-pi,pi],本场景中只用到 [0,pi]
-    theta = torch.linspace(0, np.pi , num_sampling_points).cuda()
-    phi = torch.linspace(0, np.pi, num_sampling_points).cuda()
+    theta = torch.linspace(0, np.pi , num_sampling_points).to(device)
+    phi = torch.linspace(0, np.pi, num_sampling_points).to(device)
     
     dtheta = (np.pi) / num_sampling_points
     dphi = (np.pi) / num_sampling_points
 
     grid = torch.stack(torch.meshgrid(r, theta, phi), dim = -1)
-    grid_x = torch.stack(torch.meshgrid(x0, theta, phi), dim = -1)
-    grid_y = torch.stack(torch.meshgrid(y0, theta, phi), dim = -1)
-    grid_z = torch.stack(torch.meshgrid(z0, theta, phi), dim = -1)
+    grid_x = torch.stack(torch.meshgrid(x0, theta, phi), dim = -1).to(device)
+    grid_y = torch.stack(torch.meshgrid(y0, theta, phi), dim = -1).to(device)
+    grid_z = torch.stack(torch.meshgrid(z0, theta, phi), dim = -1).to(device)
 
     spherical = grid.reshape([-1,3])
     grid_x = grid_x.reshape([-1,3])[:,0]
@@ -81,7 +81,7 @@ def spherical_sample_bin_tensor_bbox(camera_grid_positions, r, num_sampling_poin
 
     cartesian = spherical2cartesian(spherical)
 
-    cartesian = cartesian + torch.stack([grid_x,grid_y,grid_z], dim=-1)
+    cartesian = cartesian.to(device) + torch.stack([grid_x,grid_y,grid_z], dim=-1).to(device)
     
     # print(spherical[:,1].reshape([-1,1]).max(), spherical[:,1].reshape([-1,1]).min(), spherical[:,2].reshape([-1,1]).max(), spherical[:,2].reshape([-1,1]).min())
     direction = Azimuth_to_vector(spherical[:,1].reshape([-1,1]), spherical[:,2].reshape([-1,1]))
@@ -137,8 +137,8 @@ def encoding_sph(hist, L, L_view, no_view):
 
 def encoding_sph_tensor(hist, L, L_view, no_view):
     # coded_hist = torch.cat([encoding(hist[k], L) for k in range(hist.shape[0])], 0)
-    logseq = torch.logspace(start=0, end=L-1, steps=L, base=2).float().cuda()
-    logseq_view = torch.logspace(start=0, end=L_view-1, steps=L_view, base=2).float().cuda()
+    logseq = torch.logspace(start=0, end=L-1, steps=L, base=2).float().to(device)
+    logseq_view = torch.logspace(start=0, end=L_view-1, steps=L_view, base=2).float().to(device)
 
     xsin = torch.sin((logseq*math.pi).reshape([1,-1])*hist[:,0].reshape([-1, 1]))
     ysin = torch.sin((logseq*math.pi).reshape([1,-1])*hist[:,1].reshape([-1, 1]))
@@ -390,7 +390,7 @@ def psf_for_nlos(wall_size, deltaT, Nx, Ny, Nz, device):
     psf = psf/np.sum(psf[:,Nx,Ny])
     psf = psf/np.linalg.norm(psf.flatten())
     psf = np.roll(psf, (Nx, Ny), axis = (1,2))
-    # psf = torch.from_numpy(psf.astype(float)).cuda()[None, None, :, :, :]
+    # psf = torch.from_numpy(psf.astype(float)).to(device)[None, None, :, :, :]
     psf = torch.from_numpy(psf.astype(np.float32)).to(device)
     # psf_t = torch.load('./psf.npy')
     # print(torch.sum((psf-psf_t)**2))
@@ -413,8 +413,8 @@ def resamplingOperator(Nz, device):
     #     mtx  = 0.5*(mtx[::2,:]  + mtx[1:,:][::2,:])
     #     mtxi = 0.5*(mtxi[:,::2] + mtxi[:,1:][:,::2])
 
-    # mtx = torch.from_numpy(mtx.astype(np.float32)).cuda()
-    # mtxi = torch.from_numpy(mtxi.astype(np.float32)).cuda()
+    # mtx = torch.from_numpy(mtx.astype(np.float32)).to(device)
+    # mtxi = torch.from_numpy(mtxi.astype(np.float32)).to(device)
 
     # # grid_t = torch.load('./mtx.npy')
     # # print(torch.sum((mtx-grid_t)**2))
@@ -425,8 +425,8 @@ def resamplingOperator(Nz, device):
     # return invmtx, invmtxi, mtx, mtxi
 
     # cuda
-    # mtx = torch.zeros([Nz**2,Nz]).cuda()
-    # x = torch.linspace(0,Nz**2-1,Nz**2).long().cuda()
+    # mtx = torch.zeros([Nz**2,Nz]).to(device)
+    # x = torch.linspace(0,Nz**2-1,Nz**2).long().to(device)
 
     # mtx[x,(torch.ceil(torch.sqrt(x+1))-1).long()] = 1
 
@@ -438,8 +438,8 @@ def resamplingOperator(Nz, device):
     #     mtx  = 0.5*(mtx[::2,:]  + mtx[1:,:][::2,:])
     #     mtxi = 0.5*(mtxi[:,::2] + mtxi[:,1:][:,::2])
 
-    # # mtx = torch.from_numpy(mtx.astype(np.float32)).cuda()
-    # # mtxi = torch.from_numpy(mtxi.astype(np.float32)).cuda()
+    # # mtx = torch.from_numpy(mtx.astype(np.float32)).to(device)
+    # # mtxi = torch.from_numpy(mtxi.astype(np.float32)).to(device)
 
     # # grid_t = torch.load('./mtx.npy')
     # # print(torch.sum((mtx-grid_t)**2))
