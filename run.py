@@ -25,12 +25,10 @@ seed = 3407
 torch.manual_seed(seed)            # 为CPU设置随机种子
 torch.cuda.manual_seed(seed)       # 为当前GPU设置随机种子
 torch.cuda.manual_seed_all(seed)   # 为所有GPU设置随机种子
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 np.random.seed(seed)
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1'
-# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-print('CUDA:', os.environ['CUDA_VISIBLE_DEVICES'])
+os.environ["CUDA_VISIBLE_DEVICES"] = "1,0"
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train():
 
@@ -291,7 +289,6 @@ def train():
             target_nlos = target_nlos[:Nz,:Nx,:Ny]
             padding_nlos[data_start:data_end,:Nx,:Ny] = 0
 
-        # pdb.set_trace()
 
         if args.padding:
             nlos_histogram = nlos_data.flatten()
