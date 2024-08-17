@@ -5,19 +5,26 @@
 ## [Project page](https://github.com/hazelzz/netf-torch-ngp/) | [Paper](https://ieeexplore.ieee.org/abstract/document/10233796) 
 
 ## Install
-### Install with pip
+
 ```bash
+conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=11.8 -c pytorch -c nvidia
+pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+cd *encoder/
+
+```
+
+```bash
+
 pip install -r requirements.txt
 
 # (optional) install the tcnn backbone
-pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 ```
 
-### Install with conda
+<!-- ### Install with conda
 ```bash
 conda env create -f environment.yml
 conda activate torch-ngp
-```
+``` -->
 
 ### Install encodings
 ```bash
