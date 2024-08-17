@@ -38,5 +38,3 @@ i_model = 1000
 i_print = 100
 i_obj = 1000
 obj_threshold = 0.1
-
-model_path = ./logs/cudaGL_wiener/run_bike_nonconfocal_cdt_shift_32_0.015_1/model/model_5000.pt

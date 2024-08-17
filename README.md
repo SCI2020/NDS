@@ -8,9 +8,12 @@
 
 ```bash
 conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=11.8 -c pytorch -c nvidia
-pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
-cd *encoder/
-
+cd freqencoder
+pip install .
+cd ../gridencoder
+pip install .
+cd ../shencoder
+pip install .
 ```
 
 ```bash
@@ -57,7 +60,7 @@ python run.py --config <path to config>
 ```
 Example:
 ```bash
-python run.py --config <path to config>
+python run.py --config configs/cudaGL/bike_nonconfocal_cdt_shift_32_0.015_1_render.txt
 ```
 Parameters are modified in the config file.
 
