@@ -94,32 +94,32 @@ def render():
 
     # Load data
     if args.dataset_type == 'nlos':
-        nlos_data, camera_grid_positions, camera_grid_points, volume_position, volume_size, deltaT = load_nlos_data(args.datadir)
-        # nlos_data = np.transpose(nlos_data, [1, 2, 0])
-        # print(nlos_data.max())
-        nlos_data = nlos_data / nlos_data.max() * 100
+        cdt_data, camera_grid_positions, camera_grid_points, volume_position, volume_size, deltaT = load_cdt_data(args.datadir)
+        # cdt_data = np.transpose(cdt_data, [1, 2, 0])
+        # print(cdt_data.max())
+        cdt_data = cdt_data / cdt_data.max() * 100
         wall_size = 1
         magic_number = 0.5
-        # print(nlos_data.max())
-        # nlos_data = nlos_data * 100
-        # nlos_data = nlos_data / nlos_data.max()
-        print(nlos_data.shape, camera_grid_positions.shape)
+        # print(cdt_data.max())
+        # cdt_data = cdt_data * 100
+        # cdt_data = cdt_data / cdt_data.max()
+        print(cdt_data.shape, camera_grid_positions.shape)
         print('Loaded nlos')
         # return
     elif args.dataset_type == 'iqi':
-        nlos_data, camera_grid_positions, deltaT = load_iqi_data(args.datadir)
+        cdt_data, camera_grid_positions, deltaT = load_iqi_data(args.datadir)
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
         wall_size = camera_grid_positions[0,:].max() * 2
         magic_number = wall_size / 2
-        print(nlos_data.shape, camera_grid_positions.shape, deltaT, wall_size)
+        print(cdt_data.shape, camera_grid_positions.shape, deltaT, wall_size)
         print('Loaded iqi')
         # return
     elif args.dataset_type == 'generated':
-        nlos_data = load_generated_data(args.datadir)
-        nlos_data = np.transpose(nlos_data, [2, 0, 1])
-        # nlos_data = nlos_data / nlos_data.max() * 100
-        # print(nlos_data.max())
+        cdt_data = load_generated_data(args.datadir)
+        cdt_data = np.transpose(cdt_data, [2, 0, 1])
+        # cdt_data = cdt_data / cdt_data.max() * 100
+        # print(cdt_data.max())
         deltaT = 0.0012
         wall_size = 0.55
         magic_number = wall_size / 2
@@ -136,23 +136,23 @@ def render():
 
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
-        print(nlos_data.shape, camera_grid_positions.shape)
+        print(cdt_data.shape, camera_grid_positions.shape)
         print('Loaded nlos')
         # return
     elif args.dataset_type == 'real':
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
 
-        nlos_data = io.loadmat(args.datadir)
+        cdt_data = io.loadmat(args.datadir)
 
-        data = nlos_data['data']
+        data = cdt_data['data']
         data = data.reshape([64, 64, 4096])
-        temp = nlos_data['positions']
+        temp = cdt_data['positions']
         camera_grid_positions = np.zeros([3, 4096])
         camera_grid_positions[0,:] = temp[0,:]
         camera_grid_positions[2,:] = temp[1,:]
         deltaT = 0.0012 / 2
-        nlos_data = np.transpose(data,(2, 0, 1))
+        cdt_data = np.transpose(data,(2, 0, 1))
         wall_size = 0.8
         print('Loaded real data')    
     else:
@@ -197,19 +197,19 @@ def render():
     # ignore some useless bins
     if args.neglect_former_bins:
         data_start = args.neglect_former_nums
-        data_end = nlos_data.shape[0] - args.neglect_back_nums
-        nlos_data = nlos_data
+        data_end = cdt_data.shape[0] - args.neglect_back_nums
+        cdt_data = cdt_data
         print('all bins < ', data_start, ' and bins >', data_end, ' are neglected')
         # return
     else:
         data_start = 0
-        data_end = nlos_data.shape[2]
+        data_end = cdt_data.shape[2]
 
     # Pre-process
     pmin = torch.Tensor([-wall_size/2 - data_end * deltaT, - data_end * deltaT, -wall_size/2 - data_end * deltaT, 0, -np.pi]).float().to(device)
     pmax = torch.Tensor([wall_size/2 + data_end * deltaT, - data_start * deltaT, wall_size/2 + data_end * deltaT, np.pi, 0]).float().to(device)
     
-    nlos_data = torch.Tensor(nlos_data).to(device)
+    cdt_data = torch.Tensor(cdt_data).to(device)
     camera_grid_positions = torch.from_numpy(camera_grid_positions).float().to(device)
 
     reso = 64

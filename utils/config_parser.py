@@ -95,8 +95,6 @@ def config_parser():
                         help='add noise to data or not')
     parser.add_argument("--scale", action='store_true', default=True,
                         help='when True, the data has been shifted')
-    parser.add_argument("--padding", action='store_true', default=False,
-                        help='when True, the data will been padded in decovlution')
 
     parser.add_argument("--n", type=float, default=0, 
                         help='refractive index')

@@ -1,5 +1,5 @@
 import torch
-from load_nlos import load_nlos_data
+from load_nlos import load_cdt_data
 from run_nerf_helpers import *
 import scipy.io as scio
 import numpy as np

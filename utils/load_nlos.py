@@ -12,20 +12,20 @@ import pdb
 
 def load_iqi_data(basedir):
 
-    nlos_data = scio.loadmat(basedir)
+    cdt_data = scio.loadmat(basedir)
 
-    data = nlos_data['data_transients'][:,:4096]
+    data = cdt_data['data_transients'][:,:4096]
     data = np.transpose(data, [1, 0])
-    illumination_coords = nlos_data['data_illumin_coordinates']
+    illumination_coords = cdt_data['data_illumin_coordinates']
     illumination_coords_x = illumination_coords[0,:].reshape([1,-1])
     illumination_coords_y = np.zeros([1, illumination_coords.shape[1]])
     illumination_coords_z = illumination_coords[1,:].reshape([1,-1])
     camera_grid_positions = np.concatenate([illumination_coords_x, illumination_coords_y, illumination_coords_z], axis=0)
 
-    deltaT = nlos_data['data_time_bin'][0][0] * 3e8
+    deltaT = cdt_data['data_time_bin'][0][0] * 3e8
     wall_size = camera_grid_positions[0,:].max() * 2
 
-    mask = nlos_data['parameters_wall_visible']
+    mask = cdt_data['parameters_wall_visible']
     mask = (mask.squeeze() == 1)
     # print(mask.shape)
     # print(data.shape, camera_grid_positions.shape)
@@ -36,58 +36,58 @@ def load_iqi_data(basedir):
 
 def load_iqi_los_data(basedir):
 
-    nlos_data = scio.loadmat(basedir)
+    cdt_data = scio.loadmat(basedir)
 
-    data = nlos_data['data_los_transients'][:,:4096]
+    data = cdt_data['data_los_transients'][:,:4096]
     data = np.transpose(data, [1, 0])
-    wall_size = nlos_data['data_illumin_coordinates'][0,:].max() * 2
-    data_theta = nlos_data['data_los_theta'].squeeze()
-    deltaT = nlos_data['data_time_bin'][0][0] * 3e8
+    wall_size = cdt_data['data_illumin_coordinates'][0,:].max() * 2
+    data_theta = cdt_data['data_los_theta'].squeeze()
+    deltaT = cdt_data['data_time_bin'][0][0] * 3e8
 
     return data, data_theta, deltaT, wall_size
 
 def load_zaragoza_data(basedir):
-    # nlos_data = h5py.File(basedir, 'r')
-    nlos_data = scio.loadmat(basedir)
+    # cdt_data = h5py.File(basedir, 'r')
+    cdt_data = scio.loadmat(basedir)
 
-    data = nlos_data['data']
+    data = cdt_data['data']
     data = data[:, :, :]
-    camera_grid_positions = nlos_data['cameraGridPositions']
-    camera_grid_points = nlos_data['cameraGridPoints'][0,:]
-    volume_position = nlos_data['hiddenVolumePosition']
-    volume_size = nlos_data['hiddenVolumeSize']
-    deltaT = nlos_data['deltaT'][0,:][0]
+    camera_grid_positions = cdt_data['cameraGridPositions']
+    camera_grid_points = cdt_data['cameraGridPoints'][0,:]
+    volume_position = cdt_data['hiddenVolumePosition']
+    volume_size = cdt_data['hiddenVolumeSize']
+    deltaT = cdt_data['deltaT'][0,:][0]
 
     return data, camera_grid_positions, camera_grid_points, volume_position, volume_size, deltaT
 
 def load_real_data(basedir):
-    nlos_data = scio.loadmat(basedir)
+    cdt_data = scio.loadmat(basedir)
 
-    data = nlos_data['data']
+    data = cdt_data['data']
     data = data[:, :, :]
-    wall_size = nlos_data['wall_size'][0,:][0]
-    deltaT = nlos_data['time_bin'][0,:][0] * nlos_data['speed_light'][0,:][0]
+    wall_size = cdt_data['wall_size'][0,:][0]
+    deltaT = cdt_data['time_bin'][0,:][0] * cdt_data['speed_light'][0,:][0]
     return data, wall_size, deltaT
 
 def load_generated_data(basedir):
-    nlos_data = scio.loadmat(basedir)
-    data = nlos_data['data']
+    cdt_data = scio.loadmat(basedir)
+    data = cdt_data['data']
     data = data[:, :, :]
     return data
 
 def load_simtof_data(basedir):
-    nlos_data = scio.loadmat(basedir)
+    cdt_data = scio.loadmat(basedir)
 
-    data = nlos_data['data']
+    data = cdt_data['data']
     data = data[:, :, :]
 
-    if 'deltaT' in nlos_data:
-        deltaT = nlos_data['deltaT'][0][0]
+    if 'deltaT' in cdt_data:
+        deltaT = cdt_data['deltaT'][0][0]
     else:
         deltaT = 0.015/2
 
-    if 'wall_size' in nlos_data:
-        wall_size = nlos_data['wall_size'][0][0]
+    if 'wall_size' in cdt_data:
+        wall_size = cdt_data['wall_size'][0][0]
     else:
         wall_size = 0.636
     
@@ -103,11 +103,11 @@ def load_simtof_data(basedir):
     return data, deltaT, wall_size
 
 def load_cudaGL_data(basedir):
-    nlos_data = scio.loadmat(basedir)
-    data = nlos_data['data']
+    cdt_data = scio.loadmat(basedir)
+    data = cdt_data['data']
     data = data[:, :, :]
-    deltaT = nlos_data['deltaT'][0][0]
-    wall_size = nlos_data['wall_size'][0][0]
+    deltaT = cdt_data['deltaT'][0][0]
+    wall_size = cdt_data['wall_size'][0][0]
 
     return data, deltaT, wall_size
 
@@ -123,11 +123,11 @@ def load_generated_gt(gtdir):
 
 def load_data(dataset_type, datadir):
     if dataset_type == 'zaragoza':
-        nlos_data, camera_grid_positions, camera_grid_points, volume_position, volume_size, deltaT = load_zaragoza_data(datadir)
-        Nz,Nx,Ny = nlos_data.shape
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
+        cdt_data, camera_grid_positions, camera_grid_points, volume_position, volume_size, deltaT = load_zaragoza_data(datadir)
+        Nz,Nx,Ny = cdt_data.shape
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
 
-        nlos_data = nlos_data / nlos_data.max() * 100
+        cdt_data = cdt_data / cdt_data.max() * 100
         wall_size = camera_grid_positions[0,0] - camera_grid_positions[0,-1]
         half_wall_size = wall_size / 2
         wall_resolution = int(np.sqrt(camera_grid_positions.shape[1]))
@@ -142,22 +142,22 @@ def load_data(dataset_type, datadir):
         camera_grid_positions = np.concatenate((camera_grid_positions_x, camera_grid_positions_y, camera_grid_positions_z), axis=1)
         camera_grid_positions = camera_grid_positions.swapaxes(0,1)
 
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded zaragoza.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny
+        return cdt_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny
         # return
     elif dataset_type == 'iqi':
-        nlos_data, camera_grid_positions, deltaT, wall_size = load_iqi_data(datadir)
+        cdt_data, camera_grid_positions, deltaT, wall_size = load_iqi_data(datadir)
         Nz,Nx,Ny = 4096,64,64
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
 
         half_wall_size = wall_size / 2
-        nlos_data[nlos_data < 0] = 0
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        cdt_data[cdt_data < 0] = 0
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded iqi.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny
+        return cdt_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny
         # return
     elif dataset_type == 'iqi_los':
         data, data_theta, deltaT, wall_size  = load_iqi_los_data(datadir)
@@ -168,12 +168,12 @@ def load_data(dataset_type, datadir):
         return data, data_theta, deltaT, wall_size ,Nz ,Nx ,Ny
         # return
     elif dataset_type == 'simtof':
-        nlos_data, deltaT, wall_size = load_simtof_data(datadir)
-        nlos_data = np.transpose(nlos_data, [2, 1, 0])
-        Nz,Nx,Ny = nlos_data.shape
-        wall_resolution = nlos_data.shape[1]
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
-        nlos_data = nlos_data / nlos_data.max() * 100
+        cdt_data, deltaT, wall_size = load_simtof_data(datadir)
+        cdt_data = np.transpose(cdt_data, [2, 1, 0])
+        Nz,Nx,Ny = cdt_data.shape
+        wall_resolution = cdt_data.shape[1]
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
+        cdt_data = cdt_data / cdt_data.max() * 100
 
         half_wall_size = wall_size / 2
         # wall_resolution = 8
@@ -189,13 +189,13 @@ def load_data(dataset_type, datadir):
 
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded simtof.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny, 0, 0, 0, 0, 0
+        return cdt_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny, 0, 0, 0, 0, 0
     
     elif dataset_type == 'cdt':
         data = scio.loadmat(datadir)
-        nlos_data = data['data']
+        cdt_data = data['data']
 
         deltaT = 0.015/2
         wall_size = 0.636
@@ -217,11 +217,11 @@ def load_data(dataset_type, datadir):
         if 'd' in data:
             zd = data['d'][0][0]
 
-        nlos_data = np.transpose(nlos_data, [2, 1, 0])
-        Nz,Nx,Ny = nlos_data.shape
-        wall_resolution = nlos_data.shape[1]
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
-        nlos_data = nlos_data / nlos_data.max() * 100
+        cdt_data = np.transpose(cdt_data, [2, 1, 0])
+        Nz,Nx,Ny = cdt_data.shape
+        wall_resolution = cdt_data.shape[1]
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
+        cdt_data = cdt_data / cdt_data.max() * 100
 
         c0 = 3e8
         c = c0/n
@@ -238,18 +238,18 @@ def load_data(dataset_type, datadir):
         camera_grid_positions = np.concatenate((camera_grid_positions_x, camera_grid_positions_y, camera_grid_positions_z), axis=1)
         camera_grid_positions = camera_grid_positions.swapaxes(0,1)
 
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded cdt.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd
+        return cdt_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd
 
     
     elif dataset_type == 'cudaGL':
-        nlos_data, deltaT, wall_size = load_cudaGL_data(datadir)
-        nlos_data = np.transpose(nlos_data, [2, 1, 0])
-        Nz,Nx,Ny = nlos_data.shape
-        wall_resolution = nlos_data.shape[1]
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
-        nlos_data = nlos_data / nlos_data.max() * 100
+        cdt_data, deltaT, wall_size = load_cudaGL_data(datadir)
+        cdt_data = np.transpose(cdt_data, [2, 1, 0])
+        Nz,Nx,Ny = cdt_data.shape
+        wall_resolution = cdt_data.shape[1]
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
+        cdt_data = cdt_data / cdt_data.max() * 100
 
         half_wall_size = wall_size / 2
 
@@ -263,25 +263,25 @@ def load_data(dataset_type, datadir):
         camera_grid_positions = np.concatenate((camera_grid_positions_x, camera_grid_positions_y, camera_grid_positions_z), axis=0)
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded cudaGL.')
-        return nlos_data, camera_grid_positions, deltaT, wall_size, Nz ,Nx ,Ny      
+        return cdt_data, camera_grid_positions, deltaT, wall_size, Nz ,Nx ,Ny      
         
     elif dataset_type == 'nlos_real':
         data = scio.loadmat(datadir)
-        nlos_data = data['data']
+        cdt_data = data['data']
         if 'parameters_wall_visible' in data:
             idx = data['parameters_wall_visible'].reshape(-1)
             idx = np.argwhere(idx==1).reshape(-1)
 
-        Nz,Nx,Ny = nlos_data.shape
+        Nz,Nx,Ny = cdt_data.shape
         wall_size = 1
         deltaT = data['deltaT'][0][0]
-        wall_resolution = nlos_data.shape[1]
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
+        wall_resolution = cdt_data.shape[1]
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
         if 'parameters_wall_visible' in data:
-            nlos_data = nlos_data[:,idx]
-        nlos_data = nlos_data / nlos_data.max() * 100
+            cdt_data = cdt_data[:,idx]
+        cdt_data = cdt_data / cdt_data.max() * 100
         
         half_wall_size = wall_size / 2
         # wall_resolution = 8
@@ -299,22 +299,22 @@ def load_data(dataset_type, datadir):
 
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded test')
-        return nlos_data, camera_grid_positions, deltaT, wall_size, Nz ,Nx ,Ny , 0, 0, 0, 0, 0
+        return cdt_data, camera_grid_positions, deltaT, wall_size, Nz ,Nx ,Ny , 0, 0, 0, 0, 0
 
     elif dataset_type == 'test':
         data = scio.loadmat(datadir)
-        nlos_data = data['data']
+        cdt_data = data['data']
 
-        nlos_data = np.transpose(nlos_data, [2, 1, 0])
-        Nz,Nx,Ny = nlos_data.shape
+        cdt_data = np.transpose(cdt_data, [2, 1, 0])
+        Nz,Nx,Ny = cdt_data.shape
 
         wall_size = 0.5
         deltaT = 0.003
-        wall_resolution = nlos_data.shape[1]
-        nlos_data = nlos_data.reshape([nlos_data.shape[0], -1])
-        nlos_data = nlos_data / nlos_data.max() * 1000
+        wall_resolution = cdt_data.shape[1]
+        cdt_data = cdt_data.reshape([cdt_data.shape[0], -1])
+        cdt_data = cdt_data / cdt_data.max() * 1000
 
         half_wall_size = wall_size / 2
         camera_grid_positions_z = np.linspace(-half_wall_size, half_wall_size, wall_resolution)
@@ -329,7 +329,7 @@ def load_data(dataset_type, datadir):
 
         volume_position = [0 , 1.08, 0]
         volume_size = [0.5]
-        print(f'nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
+        print(f'cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, deltaT: {deltaT}, wall_size: {wall_size}.')
         print('Loaded test')
         # return
     else:

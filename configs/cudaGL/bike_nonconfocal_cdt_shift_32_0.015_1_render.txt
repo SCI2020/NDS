@@ -29,7 +29,7 @@ N_iters = 5000
 bin_batch= 2048
 lrate = 5e-4
 lr_decay_rate = 0.1
-sampling_points_nums = 33
+sampling_points_nums = 20
 
 i_loss = 100
 i_hist = 100

@@ -40,10 +40,7 @@ def train():
     ################################################################################
     # Load data
     # c, mu_a, mu_s, ze, wall_size, zmax, zd
-    nlos_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
-
-    if args.padding:
-        Nz,Nx,Ny = Nz//2,Nx//2+1,Ny//2+1
+    cdt_data, camera_grid_positions, deltaT, wall_size ,Nz ,Nx ,Ny , c, mu_a, mu_s, n, zd = load_data(args.dataset_type, args.datadir)
 
     n_dipoles = 7
     if args.n>0:
@@ -132,14 +129,14 @@ def train():
     # ignore some useless bins
     # add auto neglect
     data_start = args.neglect_former_nums
-    # data_end = nlos_data.shape[0] - args.neglect_back_nums
+    # data_end = cdt_data.shape[0] - args.neglect_back_nums
     data_end = args.neglect_back_nums
-    # nlos_data = nlos_data[data_start:data_end,:]
-    nlos_data = torch.Tensor(nlos_data).to(device)
-    print(f'All bins < {data_start} and bins > {data_end} are neglected. Ignored data: {nlos_data.shape}')
+    # cdt_data = cdt_data[data_start:data_end,:]
+    cdt_data = torch.Tensor(cdt_data).to(device)
+    print(f'All bins < {data_start} and bins > {data_end} are neglected. Ignored data: {cdt_data.shape}')
 
     if not args.scale:
-        nlos_data = nlos_data/100
+        cdt_data = cdt_data/100
 
     # Pre-process
     pmin = torch.Tensor([-(wall_size/2) - data_end * deltaT, -1e-7, -(wall_size/2) - data_end * deltaT]).float().to(device)
@@ -154,12 +151,12 @@ def train():
     r_max = data_end * deltaT
     num_r = data_end - data_start
     r = torch.linspace(r_min, r_max , num_r)
-    r = r.reshape([-1,1]).expand(-1, nlos_data.shape[1])
+    r = r.reshape([-1,1]).expand(-1, cdt_data.shape[1])
 
     camera_grid_positions = camera_grid_positions.reshape([3,-1])
-    nlos_data = nlos_data.reshape([-1,1])
+    cdt_data = cdt_data.reshape([-1,1])
     r = r.reshape([-1,1])
-    print(f'Pre-precoess done. nlos_data: {nlos_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, r: {r.shape}')
+    print(f'Pre-precoess done. cdt_data: {cdt_data.shape}, camera_grid_positions: {camera_grid_positions.shape}, r: {r.shape}')
 
     N_iters = args.N_iters
     # bin_batch = args.bin_batch
@@ -265,16 +262,10 @@ def train():
             cdt_conv = torch.fft.ifftn(torch.mul(torch.fft.fftn(nlos_pad, s=(Nz*2, Nx*2, Ny*2)), psf)).real.squeeze()
         predict_cdt = cdt_conv[data_start:data_end,:Nx,:Ny]
         predict_cdt = predict_cdt.reshape([-1,1])[index_rand].squeeze()
-
-        if args.padding:
-            nlos_data = nlos_data.reshape(Nz, Nx, Ny)
-        else:
-            nlos_data = nlos_data.reshape(Nz*2, Nx*2-1, Ny*2-1)
+        cdt_data = cdt_data.reshape(Nz, Nx, Ny)
         
         cdt_pad = torch.clone(cdt_conv).to(device)
-        
-        if not args.padding:
-            cdt_pad[:Nz,:Nx,:Ny] = nlos_data
+        cdt_pad[:Nz,:Nx,:Ny] = cdt_data
 
         if args.shift:
             cdt_pad_fft = torch.fft.fftn(cdt_pad.to(device), s=(Nz*2, Nx*2-1, Ny*2-1))                  
@@ -284,17 +275,12 @@ def train():
         target_fft = torch.mul(cdt_pad_fft.to(device), invpsf.to(device))
         target_nlos = torch.fft.ifftn(target_fft).real.squeeze()
 
-        if not args.loss_type == "sparse":
-            padding_nlos = target_nlos.clone()
-            target_nlos = target_nlos[:Nz,:Nx,:Ny]
-            padding_nlos[data_start:data_end,:Nx,:Ny] = 0
-
-
-        if args.padding:
-            nlos_histogram = nlos_data.flatten()
-        else:
-            nlos_histogram = nlos_data[data_start:data_end,...].flatten()
-            nlos_histogram = nlos_histogram[index_rand].squeeze()
+        padding_nlos = target_nlos.clone()
+        target_nlos = target_nlos[:Nz,:Nx,:Ny]
+        padding_nlos[data_start:data_end,:Nx,:Ny] = 0
+        
+        nlos_histogram = cdt_data[data_start:data_end,...].flatten()
+        nlos_histogram = nlos_histogram[index_rand].squeeze()
 
         pre_histogram = predict_cdt[nlos_histogram>=0]
         nlos_histogram = nlos_histogram[nlos_histogram>=0]
