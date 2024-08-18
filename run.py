@@ -27,7 +27,7 @@ torch.cuda.manual_seed(seed)       # 为当前GPU设置随机种子
 torch.cuda.manual_seed_all(seed)   # 为所有GPU设置随机种子
 np.random.seed(seed)
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1,0"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def train():
