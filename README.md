@@ -63,12 +63,9 @@ Explanation:
 - `sampling_points_nums` number of sampling points in one direction, so the number of all sampling points is the square of this value
 - `n` refractive index
 - `mu_a` absorption coefficient
-    parser.add_argument("--mu_s", type=float, default=0, 
-                        help='scattering coefficient')
-    parser.add_argument("--zd", type=float, default=0, 
-                        help='thickness of the scattering medium')
-    parser.add_argument("--n_dipoles", type=int, default=0, 
-                        help='number of dipoles')
+- `mu_s` scattering coefficient
+- `zd` thickness of the scattering medium
+- `n_dipoles` number of dipoles
 
 ## Acknowledgement
 
