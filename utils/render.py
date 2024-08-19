@@ -225,7 +225,7 @@ def render():
 
     test_input = torch.cat((input_x, input_y, input_z, torch.ones_like(input_x) * np.pi/2, torch.ones_like(input_x) * np.pi/2 * -1), axis = 1)
     test_input = (test_input - pmin) / (pmax - pmin)
-    test_input_pe = encoding_sph_tensor(test_input.to(device), args.encoding_dim, args.encoding_dim_view,  args.no_rho)
+    test_input_pe = encoding_sph_tensor(test_input.to(device), args.encoding_dim, args.encoding_dim_view,  args.no_rho, device)
 
     with torch.no_grad():
         output = model(test_input_pe)

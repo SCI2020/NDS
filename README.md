@@ -2,51 +2,25 @@
 
 ![](assets/teaser.png)
 
-## [Project page](https://github.com/hazelzz/netf-torch-ngp/) | [Paper](https://ieeexplore.ieee.org/abstract/document/10233796) 
+### [Paper](https://ieeexplore.ieee.org/abstract/document/10233796) 
 
 ## Install
 
 ```bash
 conda install pytorch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 pytorch-cuda=11.8 -c pytorch -c nvidia
+
 cd freqencoder
 pip install .
 cd ../gridencoder
 pip install .
 cd ../shencoder
 pip install .
-```
-
-```bash
 
 pip install -r requirements.txt
 ```
 
-
-### Install encodings
-```bash
-cd *encoder/
-pip install .
-```
-
-## Repo Org
-```
-├── configs                                                                                                       
-│   ├── ...                                                                                     
-│                                                                                           
-├── data                                                                                                       
-│   ├── ...                                                                                     
-│     
-├── logs  # experiment logs                                                                                                                                                                                               
-│   ├── experiment 1                                                                                                  
-│   │   └── result # reconstructed volume                                                                                                                             
-│   │   └── histogram # rendered histogram                                                                                  
-│   │   └── Image   # rendered image
-|   |   └── model # saved model
-|   ├── experiment 2
-|   |   └── ...
-```
-
-## Data
+## Datasets
+Please download the dataset from [here](https://drive.google.com/file/d/1w2FKcE1amBOw7qyedRabWRUpBaTJov--/view?usp=sharing), which includes simulation data, datasets published by Stanford University, and data collected by ourselves. 
 
 ## Train
 
@@ -55,7 +29,9 @@ python run.py --config <path to config>
 ```
 Example:
 ```bash
-python run.py --config configs/cudaGL/bike_nonconfocal_cdt_shift_32_0.015_1_render.txt
+python run.py --config configs/cudaGL/bike_nonconfocal_cdt_shift_32_0.015.txt # Simulation data motorcycle
+python run.py --config configs/cdt_real/S_cdt.txt # Letter 'S' in Stanford dataset
+python run.py --config configs/iqi_real/umbrella_2_guijiao_1.0_cdt_32_0.0192_2023_3_30.txt # Umbrella in our dataset
 ```
 Parameters are modified in the config file.
 
@@ -93,11 +69,6 @@ Explanation:
                         help='thickness of the scattering medium')
     parser.add_argument("--n_dipoles", type=int, default=0, 
                         help='number of dipoles')
-
-### Train
-
-### Train
-
 
 ## Acknowledgement
 

@@ -1,4 +1,3 @@
-from tkinter import Y
 import torch
 torch.autograd.set_detect_anomaly(True)
 import torch.nn as nn
@@ -21,7 +20,7 @@ def Azimuth_to_vector(theta, phi):
     return torch.cat([x,y,z], dim=1)
 
 # Spherical Sampling
-def spherical_sample_bin_tensor(camera_grid_positions, r, num_sampling_points):
+def spherical_sample_bin_tensor(camera_grid_positions, r, num_sampling_points,device):
     [x0,y0,z0] = [camera_grid_positions[0,:],camera_grid_positions[1,:],camera_grid_positions[2,:]]
 
     # 直角坐标图像参考 Zaragoza 数据集中的坐标系
@@ -135,7 +134,7 @@ def encoding_sph(hist, L, L_view, no_view):
 
     return coded_hist
 
-def encoding_sph_tensor(hist, L, L_view, no_view):
+def encoding_sph_tensor(hist, L, L_view, no_view, device):
     # coded_hist = torch.cat([encoding(hist[k], L) for k in range(hist.shape[0])], 0)
     logseq = torch.logspace(start=0, end=L-1, steps=L, base=2).float().to(device)
     logseq_view = torch.logspace(start=0, end=L_view-1, steps=L_view, base=2).float().to(device)
